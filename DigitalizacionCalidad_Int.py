@@ -9,17 +9,17 @@ stack = ['-FC-','-FCFC-','-FCFCFC-','-FCFCFCFC-'] # Configuracion de las capas
 tt = 503 # Tipo de herramienta
 cuadrante = 'Upper' #En la versión v900 se pone en inglés y en la v1000, en español. Revisar linea 68 y 107.
 
-main_root = r'C:\Users\cdomi\Desktop\Doctorado UC3M-Airbus\PYTHON'
+main_root = r'C:\Users\luisg\Documents\Python Projects\DIGITALIZACION_DE_CALIDAD'
 xlsxFiles = os.listdir(main_root)
-nombresxlsx = 'BibliaV900.xlsx'
+nombresxlsx = 'v900.xlsx'
 rutaFicheroxlsx = os.path.join(main_root, nombresxlsx)
 df = pd.read_excel(rutaFicheroxlsx)
 
 # Se seleccionan únicamente los archivos donde se taladre FCFC
 matchers = ['-FC-','-FCFC-','-FCFCFC-','-FCFCFCFC-']
-fileName_FCFC = [s for s in df['Process Feature Name'] if any(xs in s for xs in matchers)]
-idx = []
-idx_2 = []
+fileName_FCFC = [s for s in df['Process Feature Name'] if any(xs in s for xs in matchers)] # Agujeros que cumplen el criterio
+idx = [] # Id de todas las piezas del cuadrante
+idx_2 = [] # Id de las piezas que cumplen el criterio
 Name_XLSX = []
 Description = []
 Description_2 = []
@@ -42,7 +42,7 @@ for i, n in enumerate(df['Process Feature Name']):
             Parts_2.append(df['Parts_To_Tight_2'][i])
             Parts_3.append(df['Parts_To_Tight_3'][i])
             Parts_4.append(df['Parts_To_Tight_4'][i])
-            Description.append(df['DESCRIPCION'][i])
+            # Description.append(df['DESCRIPCION'][i])
             ID.append(df['ID'][i])
             Name.append(df['Process Feature Name'][i])
 
@@ -60,6 +60,7 @@ for i in idx:
     Xe_FC.append(df['Xe'][i])
     Ye_FC.append(df['Ye'][i])
     Ze_FC.append(df['Ze'][i])
+
 
 fig = plt.figure(dpi=100, frameon=False)
 figure = fig.add_subplot()
@@ -92,8 +93,8 @@ if cuadrante == 'Upper' or cuadrante == 'Lower' or cuadrante == 'Superior' or cu
                 Nombre = Name[i]
                 print('ID point', ID[i])
                 Identificador = ID[i]
-                print('Descripcion', Description[i])
-                Descriptor = Description[i]
+                # print('Descripcion', Description[i])
+                # Descriptor = Description[i]
                 print('Parts', Parts_1[i], Parts_2[i], Parts_3[i], Parts_4[i], '\n')
                 P1 = Parts_1[i]
                 P2 = Parts_2[i]
@@ -112,7 +113,7 @@ if cuadrante == 'Upper' or cuadrante == 'Lower' or cuadrante == 'Superior' or cu
 
 
         annot.xy = (xvalue, yvalue)
-        text = "Location: ({},{})\nName: {} \nID: {} \nZone: {} \nParts: \n{}\n{}\n{}\n{}".format(x, y, Nombre, Identificador, Descriptor, P1, P2, P3, P4)
+        text = "Location: ({},{})\nName: {} \nID: {} \nParts: \n{}\n{}\n{}\n{}".format(x, y, Nombre, Identificador, P1, P2, P3, P4)
         annot.set_text(text)
         annot.set_visible(True)
         fig.canvas.draw()
@@ -177,8 +178,8 @@ elif cuadrante == 'Left' or cuadrante == 'Right' or cuadrante == 'Izquierdo' or 
                 Nombre = Name[i]
                 print('ID point', ID[i])
                 Identificador = ID[i]
-                print('Descripcion', Description[i])
-                Descriptor = Description[i]
+                # print('Descripcion', Description[i])
+                # Descriptor = Description[i]
                 print('Parts', Parts_1[i], Parts_2[i], Parts_3[i], Parts_4[i], '\n')
                 P1 = Parts_1[i]
                 P2 = Parts_2[i]
@@ -197,7 +198,7 @@ elif cuadrante == 'Left' or cuadrante == 'Right' or cuadrante == 'Izquierdo' or 
                 Z_Value.append(df['Ze'][i])
 
         annot.xy = (xvalue, yvalue)
-        text = "Location: ({},{})\nName: {} \nID: {} \nZone: {} \nParts: \n{}\n{}\n{}\n{}".format(x, y, Nombre, Identificador, Descriptor, P1, P2, P3, P4)
+        text = "Location: ({},{})\nName: {} \nID: {} \nParts: \n{}\n{}\n{}\n{}".format(x, y, Nombre, Identificador, P1, P2, P3, P4)
         annot.set_text(text)
         annot.set_visible(True)
         fig.canvas.draw()
@@ -231,4 +232,3 @@ elif cuadrante == 'Left' or cuadrante == 'Right' or cuadrante == 'Izquierdo' or 
     fig.canvas.mpl_connect('pick_event', onpick1)
 
     plt.show()
-

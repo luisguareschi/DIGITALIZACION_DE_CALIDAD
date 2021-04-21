@@ -1,0 +1,4 @@
+1-) Poder escoger el modelo de avion
+2-) Hacer la modalidad de seleccionar la parte directamente
+3-) Poder visualizar todas las partes del agujero seleccionado en 3D
+4-) Creacion de clases para los puntos y partes 
