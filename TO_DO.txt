@@ -1,4 +1,10 @@
-1-) Poder escoger el modelo de avion
-2-) Hacer la modalidad de seleccionar la parte directamente
-3-) Poder visualizar todas las partes del agujero seleccionado en 3D
-4-) Creacion de clases para los puntos y partes 
+1-) Poder escoger el modelo de avion xxx
+2-) Hacer la modalidad de seleccionar la parte directamente xxx
+3-) Poder visualizar todas las partes del agujero seleccionado en 3D xxx
+4-) Creacion de clases para los puntos y partes xxx
+
+5-) Crear ventanas de clases--> https://www.youtube.com/watch?v=RkaekNkIKNY
+6-) Maybe poner todo el codigo en una clase principal-->  https://www.youtube.com/watch?v=LzTvCI2BhfQ
+
+7-) Una parte puedes estar en mas de una columna (part1,part2 etc)
+8-) Poder seleccionar puntos en la vista 3D (id, name, partes asociadas)
