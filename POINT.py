@@ -15,3 +15,4 @@ class Point:
         self.part_5 = part_5
         self.part_6 = part_6
         self.quadrant = quadrant
+        self.part_names = [self.part_1, self.part_2, self.part_3, self.part_4, self.part_5, self.part_6]

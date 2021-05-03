@@ -10,6 +10,7 @@ import tkinter as tk
 
 class App:
     def __init__(self):
+        self.draw_gui()
         # Initial Settings
         self.a = 0
         self.c = 0
@@ -18,7 +19,211 @@ class App:
         self.configuration = '-'  # VARIABLE A ESCOGER (part/quadrant)
         self.selected_quadrant = '-'  # VARIABLE A ESCOGER (Upper/Lower/Right/Left)
         self.selected_part = ''  # VARIABLE A ESCOGER (nombre de la parte)
+        self.matchers = ['-FC-', '-FCFC-', '-FCFCFC-', '-FCFCFCFC-'] # Variable a escoger
+        self.selected_tool_types_1 = [503] # VARIABLEA ESCOGER
+        self.selected_tool_types = ['ADH', 'TDRILL'] # VARIABLE A ESCOGER
 
+        while True:
+            # Run back_end code
+            self.update_code()
+            # print(self.state, self.plane_type, self.configuration, self.selected_quadrant, self.selected_part)
+
+            # Run main loop
+            self.main.update_idletasks()
+            self.main.update()
+
+    def update_code(self):
+        # Intial settings
+        if self.state == 'MENU':
+            pass
+
+        if self.state == 'LOADING':
+            print('loading')
+            # Abrir y Leer archivo .xlsx
+            self.main_root = os.path.dirname(os.path.abspath(__file__))
+            if self.plane_type == 'v900':
+                self.xlsx_name = 'v900.xlsx'
+            if self.plane_type == 'v1000':
+                self.xlsx_name = 'v1000.xlsx'
+            self.file_root = os.path.join(self.main_root, self.xlsx_name)
+            self.df = pd.read_excel(self.file_root)
+
+            # Leer cada columna y crear una lista de cada una
+            self.ids = self.df['ID']
+            self.process_feature_names = self.df['Process Feature Name']
+            self.diameters = self.df['Diameter']
+            self.xes = self.df['Xe']
+            self.yes = self.df['Ye']
+            self.zes = self.df['Ze']
+            self.tool_1s = self.df['Tool 1']
+            self.tools = self.df['Tdrill/adh/230/ninguno']
+            self.parts_1 = self.df['Parts_To_Tight_1']
+            self.parts_2 = self.df['Parts_To_Tight_2']
+            self.parts_3 = self.df['Parts_To_Tight_3']
+            self.parts_4 = self.df['Parts_To_Tight_4']
+            self.parts_5 = self.df['Parts_To_Tight_5']
+            self.parts_6 = self.df['Parts_To_Tight_6']
+            self.quadrants = self.df['CUADRANTE TEORICO']
+
+            self.all_points = []  # Todos lo puntos que hay en el excel
+            # Crear una lista con todos los objetos point
+            for i in range(len(self.ids)):
+                id = self.ids[i]
+                process_f_name = self.process_feature_names[i]
+                diameter = self.diameters[i]
+                xe = self.xes[i]
+                ye = self.yes[i]
+                ze = self.zes[i]
+                tool_1 = self.tool_1s[i]
+                tool = self.tools[i]
+                part_1 = self.parts_1[i]
+                part_2 = self.parts_2[i]
+                part_3 = self.parts_3[i]
+                part_4 = self.parts_4[i]
+                part_5 = self.parts_5[i]
+                part_6 = self.parts_6[i]
+                quadrant = self.quadrants[i]
+                point = Point(id, process_f_name, diameter, xe, ye, ze, tool_1,
+                              tool, part_1, part_2, part_3, part_4, part_5,
+                              part_6, quadrant)
+                self.all_points.append(point)
+
+            # Crear todas las partes
+            self.all_parts = []
+            self.part_names = []
+            for point in self.all_points:
+                if point.part_1 not in self.part_names:
+                    self.part_names.append(point.part_1)
+                if point.part_2 not in self.part_names:
+                    self.part_names.append(point.part_2)
+                if point.part_3 not in self.part_names:
+                    self.part_names.append(point.part_3)
+                if point.part_4 not in self.part_names:
+                    self.part_names.append(point.part_4)
+                if point.part_5 not in self.part_names:
+                    self.part_names.append(point.part_5)
+                if point.part_6 not in self.part_names:
+                    self.part_names.append(point.part_6)
+
+            for name in self.part_names:
+                x = []
+                y = []
+                z = []
+                for point in self.all_points:
+                    if point.part_1 == name:
+                        x.append(point.xe)
+                        y.append(point.ye)
+                        z.append(point.ze)
+                    elif point.part_2 == name:
+                        x.append(point.xe)
+                        y.append(point.ye)
+                        z.append(point.ze)
+                    elif point.part_3 == name:
+                        x.append(point.xe)
+                        y.append(point.ye)
+                        z.append(point.ze)
+                    elif point.part_4 == name:
+                        x.append(point.xe)
+                        y.append(point.ye)
+                        z.append(point.ze)
+                    elif point.part_5 == name:
+                        x.append(point.xe)
+                        y.append(point.ye)
+                        z.append(point.ze)
+                    elif point.part_6 == name:
+                        x.append(point.xe)
+                        y.append(point.ye)
+                        z.append(point.ze)
+                p = Part(name, x, y, z)
+                self.all_parts.append(p)
+
+            print('Se han creado {} puntos'.format(len(self.all_points)))
+            print('Se han creado {} partes'.format(len(self.all_parts)))
+
+            if self.configuration == 'Quadrant':
+                self.state = 'DISPLAY POINT'
+            if self.configuration == 'Part':
+                self.state = 'SELECT PART'
+
+        if self.state == 'SELECT PART':
+            if self.a == 0:
+                # Part config window
+                self.window8 = tk.Frame(self.main, bg='#00284d')
+                self.window8.place(relwidth=1, relheight=1)
+                self.label2 = tk.Label(self.window8, text='Selecciona la parte que quieres ver:', font=("Arial", "18"),
+                                       bg='#00284d',
+                                       fg='white')
+                self.label2.place(rely=.2, relwidth=1)
+                self.button1 = tk.Button(self.window8, text='START', font=("Arial", "20"), bd=0,
+                                         activebackground='grey',
+                                         command=lambda: [self.change_window(self.window5),
+                                                          self.set_part(),
+                                                          self.change_state('DISPLAY POINT')])
+                self.button1.place(relx=.8, rely=.80)
+                self.entry1 = tk.Entry(self.window8, font=("Arial", "20"))
+                self.entry1.place(rely=.3, relx=.3)
+                self.entry1.bind("<KeyRelease>", self.check_part_name)
+                self.list1 = tk.Listbox(self.window8, font=("Arial", "20"), bd=0)
+                self.update_parts_list(self.part_names)
+                self.list1.place(rely=.4, relx=.3)
+
+                self.scroll = tk.Scrollbar(self.window8, orient='vertical')
+                self.scroll.config(command=self.list1.yview)
+                self.scroll.place(rely=.4, relx=.67, relheight=.55)
+
+                self.list1.config(yscrollcommand=self.scroll.set)
+            self.a += 1
+
+        if self.state == 'DISPLAY POINT':
+            if self.c == 0:
+                print('Loading complete')
+                self.window5.tkraise()
+                if self.configuration == 'Quadrant':
+                    # Lista con puntos que unicamente cumplen todos los criterios de herramienta, cuadrante etc (color rojo)
+                    self.selected_points = []
+                    for point in self.all_points:
+                        if any(x in point.process_f_name for x in self.matchers):
+                            if point.tool_1 in self.selected_tool_types_1:
+                                if point.tool in self.selected_tool_types:
+                                    if point.quadrant == self.selected_quadrant:
+                                        self.selected_points.append(point)
+
+                    # Lista con todos los puntos del cuadrante
+                    self.quadrant_points = []
+                    for point in self.all_points:
+                        if point.quadrant == self.selected_quadrant:
+                            self.quadrant_points.append(point)
+
+                    self.X_quadrant, self.Y_quadrant, self.Z_quadrant = self.get_cords(self.quadrant_points)
+
+                    self.X_selected, self.Y_selected, self.Z_selected = self.get_cords(self.selected_points)
+
+                    self.fig = plt.figure(dpi=100, frameon=False)
+                    self.figure = self.fig.add_subplot()
+                    self.figure.set_title(self.selected_quadrant)
+                    self.cursor = Cursor(self.figure, horizOn=True, vertOn=True, color='b', linewidth=1)
+                    if self.selected_quadrant == 'Upper' or self.selected_quadrant == 'Lower' or self.selected_quadrant == 'Superior' or self.selected_quadrant == 'Inferior':
+                        self.figure.plot(self.X_quadrant, self.Y_quadrant, 'o', markersize=1, color='black')
+                        self.figure.plot(self.X_selected, self.Y_selected, 'o', markersize=2, color='red', picker=5)
+                    elif self.selected_quadrant == 'Right' or self.selected_quadrant == 'Left' or self.selected_quadrant == 'Derecho' or self.selected_quadrant == 'Izquierdo':
+                        self.figure.plot(self.X_quadrant, self.Z_quadrant, 'o', markersize=1, color='black')
+                        self.figure.plot(self.X_selected, self.Z_selected, 'o', markersize=2, color='red', picker=5)
+                    self.annot = self.figure.annotate("", xy=(0, 0), xytext=(-40, 40), textcoords="offset points",
+                                                      bbox=dict(boxstyle='round', fc='linen', ec='k', lw=1),
+                                                      arrowprops=dict(arrowstyle='-|>'))
+                    self.annot.set_visible(False)
+
+                    self.fig.canvas.mpl_connect('pick_event', self.on_pick_point)
+
+                    plt.show()
+                if self.configuration == 'Part':
+                    self.plot_part(self.all_parts, self.selected_part)
+                    plt.show()
+
+            self.c = self.c + 1
+
+    def draw_gui(self):
+        # Start TKinter
         self.main = tk.Tk()
         self.canvas = tk.Canvas(self.main, height=600, width=800)
         self.canvas.pack()
@@ -101,217 +306,6 @@ class App:
         # Show main menu window
         self.window1.tkraise()
 
-        while True:
-            # Run back_end code
-            self.update_code()
-            # print(self.state, self.plane_type, self.configuration, self.selected_quadrant, self.selected_part)
-
-            # Run main loop
-            self.main.update_idletasks()
-            self.main.update()
-
-    def update_code(self):
-        # Intial settings
-        if self.state == 'MENU':
-            self.matchers = ['-FC-', '-FCFC-', '-FCFCFC-', '-FCFCFCFC-']
-            self.selected_tool_types_1 = [503]
-            self.selected_tool_types = ['ADH', 'TDRILL']
-
-        if self.state == 'LOADING':
-            print('loading')
-            # Abrir y Leer archivo .xlsx
-            self.main_root = os.path.dirname(os.path.abspath(__file__))
-            if self.plane_type == 'v900':
-                self.xlsx_name = 'v900.xlsx'
-            if self.plane_type == 'v1000':
-                self.xlsx_name = 'v1000.xlsx'
-            self.file_root = os.path.join(self.main_root, self.xlsx_name)
-            self.df = pd.read_excel(self.file_root)
-
-            # Leer cada columna y crear una lista de cada una
-            self.ids = self.df['ID']
-            self.process_feature_names = self.df['Process Feature Name']
-            self.diameters = self.df['Diameter']
-            self.xes = self.df['Xe']
-            self.yes = self.df['Ye']
-            self.zes = self.df['Ze']
-            self.tool_1s = self.df['Tool 1']
-            self.tools = self.df['Tdrill/adh/230/ninguno']
-            self.parts_1 = self.df['Parts_To_Tight_1']
-            self.parts_2 = self.df['Parts_To_Tight_2']
-            self.parts_3 = self.df['Parts_To_Tight_3']
-            self.parts_4 = self.df['Parts_To_Tight_4']
-            self.parts_5 = self.df['Parts_To_Tight_5']
-            self.parts_6 = self.df['Parts_To_Tight_6']
-            self.quadrants = self.df['CUADRANTE TEORICO']
-
-            self.all_points = []  # Todos lo puntos que hay en el excel
-            # Crear una lista con todos los objetos point
-            for i in range(len(self.ids)):
-                id = self.ids[i]
-                process_f_name = self.process_feature_names[i]
-                diameter = self.diameters[i]
-                xe = self.xes[i]
-                ye = self.yes[i]
-                ze = self.zes[i]
-                tool_1 = self.tool_1s[i]
-                tool = self.tools[i]
-                part_1 = self.parts_1[i]
-                part_2 = self.parts_2[i]
-                part_3 = self.parts_3[i]
-                part_4 = self.parts_4[i]
-                part_5 = self.parts_5[i]
-                part_6 = self.parts_6[i]
-                quadrant = self.quadrants[i]
-                point = Point(id, process_f_name, diameter, xe, ye, ze, tool_1,
-                              tool, part_1, part_2, part_3, part_4, part_5,
-                              part_6, quadrant)
-                self.all_points.append(point)
-
-            # Crear todas las partes
-            self.all_parts = []
-            self.part1_names = []
-            self.part2_names = []
-            self.part3_names = []
-            self.part4_names = []
-            self.part5_names = []
-            self.part6_names = []
-            for point in self.all_points:
-                if point.part_1 not in self.part1_names:
-                    self.part1_names.append(point.part_1)
-                if point.part_2 not in self.part2_names:
-                    self.part2_names.append(point.part_2)
-                if point.part_3 not in self.part3_names:
-                    self.part3_names.append(point.part_3)
-                if point.part_4 not in self.part4_names:
-                    self.part4_names.append(point.part_4)
-                if point.part_5 not in self.part5_names:
-                    self.part5_names.append(point.part_5)
-                if point.part_6 not in self.part6_names:
-                    self.part6_names.append(point.part_6)
-
-            self.part_names = [self.part1_names, self.part2_names, self.part3_names,
-                               self.part4_names, self.part5_names, self.part6_names]
-            for parti_names in self.part_names:
-                for name in parti_names:
-                    x = []
-                    y = []
-                    z = []
-                    for point in self.all_points:
-                        if point.part_1 == name:
-                            x.append(point.xe)
-                            y.append(point.ye)
-                            z.append(point.ze)
-                        elif point.part_2 == name:
-                            x.append(point.xe)
-                            y.append(point.ye)
-                            z.append(point.ze)
-                        elif point.part_3 == name:
-                            x.append(point.xe)
-                            y.append(point.ye)
-                            z.append(point.ze)
-                        elif point.part_4 == name:
-                            x.append(point.xe)
-                            y.append(point.ye)
-                            z.append(point.ze)
-                        elif point.part_5 == name:
-                            x.append(point.xe)
-                            y.append(point.ye)
-                            z.append(point.ze)
-                        elif point.part_6 == name:
-                            x.append(point.xe)
-                            y.append(point.ye)
-                            z.append(point.ze)
-                    p = Part(name, x, y, z)
-                    self.all_parts.append(p)
-
-            print('Se han creado {} puntos'.format(len(self.all_points)))
-            print('Se han creado {} partes'.format(len(self.all_parts)))
-
-            if self.configuration == 'Quadrant':
-                self.state = 'DISPLAY POINT'
-            if self.configuration == 'Part':
-                self.state = 'SELECT PART'
-
-        if self.state == 'SELECT PART':
-            if self.a == 0:
-                # Part config window
-                self.window8 = tk.Frame(self.main, bg='#00284d')
-                self.window8.place(relwidth=1, relheight=1)
-                self.label2 = tk.Label(self.window8, text='Selecciona la parte que quieres ver:', font=("Arial", "18"),
-                                       bg='#00284d',
-                                       fg='white')
-                self.label2.place(rely=.3, relwidth=1)
-                self.button1 = tk.Button(self.window8, text='START', font=("Arial", "20"), bd=0,
-                                         activebackground='grey',
-                                         command=lambda: [self.change_window(self.window5),
-                                                          self.set_part(),
-                                                          self.change_state('DISPLAY POINT')])
-                self.button1.place(relx=.8, rely=.80)
-
-                self.list1 = tk.Listbox(self.window8, font=("Arial", "20"), bd=0)
-                self.index = 0
-                for parts_list in self.part_names:
-                    for part_name in parts_list:
-                        self.list1.insert(self.index, part_name)
-                        self.index += 1
-                self.list1.place(rely=.4, relx=.3)
-
-                self.scroll = tk.Scrollbar(self.window8, orient='vertical')
-                self.scroll.config(command=self.list1.yview)
-                self.scroll.place(rely=.4, relx=.67, relheight=.55)
-
-                self.list1.config(yscrollcommand=self.scroll.set)
-            self.a += 1
-
-        if self.state == 'DISPLAY POINT':
-            if self.c == 0:
-                print('Loading complete')
-                self.window5.tkraise()
-                if self.configuration == 'Quadrant':
-                    # Lista con puntos que unicamente cumplen todos los criterios de herramienta, cuadrante etc
-                    self.selected_points = []
-                    for point in self.all_points:
-                        if any(x in point.process_f_name for x in self.matchers):
-                            if point.tool_1 in self.selected_tool_types_1:
-                                if point.tool in self.selected_tool_types:
-                                    if point.quadrant == self.selected_quadrant:
-                                        self.selected_points.append(point)
-
-                    # Lista con todos los puntos del cuadrante
-                    self.quadrant_points = []
-                    for point in self.all_points:
-                        if point.quadrant == self.selected_quadrant:
-                            self.quadrant_points.append(point)
-
-                    self.X_quadrant, self.Y_quadrant, self.Z_quadrant = self.get_cords(self.quadrant_points)
-
-                    self.X_selected, self.Y_selected, self.Z_selected = self.get_cords(self.selected_points)
-
-                    self.fig = plt.figure(dpi=100, frameon=False)
-                    self.figure = self.fig.add_subplot()
-                    self.figure.set_title(self.selected_quadrant)
-                    self.cursor = Cursor(self.figure, horizOn=True, vertOn=True, color='b', linewidth=1)
-                    if self.selected_quadrant == 'Upper' or self.selected_quadrant == 'Lower' or self.selected_quadrant == 'Superior' or self.selected_quadrant == 'Inferior':
-                        self.figure.plot(self.X_quadrant, self.Y_quadrant, 'o', markersize=1, color='black')
-                        self.figure.plot(self.X_selected, self.Y_selected, 'o', markersize=2, color='red', picker=5)
-                    elif self.selected_quadrant == 'Right' or self.selected_quadrant == 'Left' or self.selected_quadrant == 'Derecho' or self.selected_quadrant == 'Izquierdo':
-                        self.figure.plot(self.X_quadrant, self.Z_quadrant, 'o', markersize=1, color='black')
-                        self.figure.plot(self.X_selected, self.Z_selected, 'o', markersize=2, color='red', picker=5)
-                    self.annot = self.figure.annotate("", xy=(0, 0), xytext=(-40, 40), textcoords="offset points",
-                                                      bbox=dict(boxstyle='round', fc='linen', ec='k', lw=1),
-                                                      arrowprops=dict(arrowstyle='-|>'))
-                    self.annot.set_visible(False)
-
-                    self.fig.canvas.mpl_connect('pick_event', self.on_pick_point)
-
-                    plt.show()
-                if self.configuration == 'Part':
-                    self.plot_part(self.all_parts, self.selected_part)
-                    plt.show()
-
-            self.c = self.c + 1
-
     # GUI Functions
     def set_planetype(self, value):
         self.plane_type = value
@@ -342,6 +336,21 @@ class App:
     def change_state(self, value):
         self.state = value
 
+    def update_parts_list(self, list):
+        self.list1.delete(0, tk.END)
+        for name in list:
+            self.list1.insert(tk.END, name)
+
+    def check_part_name(self, event):
+        text = self.entry1.get()
+        if text == '':
+            data = self.part_names
+        else:
+            data = []
+            for name in self.part_names:
+                if text.lower() in name.lower():
+                    data.append(name)
+        self.update_parts_list(data)
     # Methods
     def on_pick_point(self, event):
         thisline = event.artist
@@ -417,23 +426,6 @@ class App:
                 ax_2.scatter(clicked_point.xe, clicked_point.ye, clicked_point.ze, color='red')
                 ax_2.set_title(part_name)
 
-                fig_3 = plt.figure()
-                ax_3 = fig_3.add_subplot()
-                ax_3.plot(x, y, 'o', markersize=2, color='blue')
-                ax_3.plot(clicked_point.xe, clicked_point.ye, 'o', markersize=2, color='red')
-                ax_3.set_title('X|Y plane')
-
-                fig_4 = plt.figure()
-                ax_4 = fig_4.add_subplot()
-                ax_4.plot(x, z, 'o', markersize=2, color='blue')
-                ax_4.plot(clicked_point.xe, clicked_point.ze, 'o', markersize=2, color='red')
-                ax_4.set_title('X|Z plane')
-
-                fig_5 = plt.figure()
-                ax_5 = fig_5.add_subplot()
-                ax_5.plot(y, z, 'o', markersize=2, color='blue')
-                ax_5.plot(clicked_point.ye, clicked_point.ze, 'o', markersize=2, color='red')
-                ax_5.set_title('Y|Z plane')
                 plt.show()
                 break
 
@@ -444,22 +436,6 @@ class App:
                 fig_2ax_2 = fig_2.add_subplot(projection='3d')
                 fig_2ax_2.scatter(part.x, part.y, part.z, color='blue')
                 fig_2ax_2.set_title(part_name)
-
-                fig_3 = plt.figure()
-                ax_3 = fig_3.add_subplot()
-                ax_3.plot(part.x, part.y, 'o', markersize=2, color='blue')
-                ax_3.set_title('X|Y plane')
-
-                fig_4 = plt.figure()
-                ax_4 = fig_4.add_subplot()
-                ax_4.plot(part.x, part.z, 'o', markersize=2, color='blue')
-                ax_4.set_title('X|Z plane')
-
-                fig_5 = plt.figure()
-                ax_5 = fig_5.add_subplot()
-                ax_5.plot(part.y, part.z, 'o', markersize=2, color='blue')
-                ax_5.set_title('Y|Z plane')
-
                 break
         print('Part not found')
 
