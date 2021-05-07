@@ -224,76 +224,133 @@ class App:
         # Marco global de Cuadrante
         self.frame2 = ttk.Frame(self.main)
         self.frame2.place(relwidth=1, relheight=1)
+        n_cols=4
+        n_rows = 5
+        weight = 1
+        for i in range(0, n_cols):
+            tk.Grid.columnconfigure(self.frame2, i, weight=weight)
+
+        for i in range(0, n_rows):
+            if i in [0,1,2]:
+                tk.Grid.rowconfigure(self.frame2, i, weight=0)
+            else:
+                tk.Grid.rowconfigure(self.frame2, i, weight=weight)
         # Titulo
         title = 'Ajustes de Visualizacion-' + str(self.plane_type)
         self.label2 = ttk.Label(self.frame2, text=title)
-        self.label2.place(relx=.01, rely=.01)
+        self.label2.grid(row=0, column=0, sticky='w', columnspan=3, pady=(0, 0), padx=(10, 10))
         # Separator
         self.separator = ttk.Separator(self.frame2)
-        self.separator.place(relx=.01, rely=.08, relwidth=.8)
+        self.separator.grid(row=1, column=0, columnspan=3, sticky='we', pady=(20,30), padx=(10, 10))
         # Button de pieza/cuadrante
-        self.button3 = ttk.Combobox(self.frame2, state='readonly', values=['Part', 'Quadrant'])
-        self.button3.place(relx=.01, rely=.1)
+        self.button3 = ttk.Combobox(self.frame2, state='readonly', values=['Part', 'Quadrant'], width=8)
+        self.button3.grid(row=2, column=0, sticky='w', pady=(0, 20), padx=(10, 0))
         self.button3.bind("<<ComboboxSelected>>", self.set_config2)
+        # Boton de seleccionar cuadrante
+        self.button4 = ttk.Combobox(self.frame2, state='readonly', values=['Upper', 'Lower', 'Right', 'Left'])
+        self.button4.grid(row=2, column=1, sticky='w', pady=(0, 20))
+        self.button4.bind("<<ComboboxSelected>>", self.set_quadrant)
         # Boton start
         self.button2 = ttk.Button(self.frame2, text='Start', style='AccentButton',
                                   command=lambda: [self.load_quadrant()])
-        self.button2.place(relx=.7, rely=.1)
-        # Boton de seleccionar cuadrante
-        self.button4 = ttk.Combobox(self.frame2, state='readonly', values=['Upper', 'Lower', 'Right', 'Left'])
-        self.button4.place(relx=.3, rely=.1)
-        self.button4.bind("<<ComboboxSelected>>", self.set_quadrant)
-        # Visualizador de partes
+        self.button2.grid(row=2, column=2, sticky='w', pady=(0, 20))
+        # Cuadrante vacio
+        self.fig = plt.figure(dpi=100, frameon=False, figsize=(7, 6))
+        self.figure = self.fig.add_subplot()
+
+        miniframe = tk.LabelFrame(self.frame2, text='Cuadrante')
+        miniframe.grid(row=3, column=0, rowspan=2, columnspan=2, sticky='ewns', pady=(0, 20), padx=(10, 10))
+        self.canvas_plot = FigureCanvasTkAgg(self.fig, miniframe)
+        self.canvas_plot.get_tk_widget().pack(fill='both', side='top', expand=True)
+        toolbar = NavigationToolbar2Tk(self.canvas_plot, miniframe)
+        # Visualizador de partes/info
         self.part_window = ttk.Notebook(self.frame2)
-        self.part_window.place(relx=.45, rely=.2)
-        # Caja de informacion
-        self.infobox = tk.LabelFrame(self.frame2, text='Datos del punto', width=600, height=300)
-        self.infobox.place(relx=.45, rely=.65)
-        self.infobox.pack_propagate(0)
-        self.infolabel = tk.Label(self.infobox, text='', font=('Arial', '14'))
-        self.infolabel.pack(fill='both')
+        self.part_window.grid(row=3, column=2, sticky='wens', columnspan=2, rowspan=2, pady=(0, 20), padx=(0, 10))
+        # Parte vacia
+        self.fig2 = plt.figure()
+        self.ax_2 = self.fig2.add_subplot(projection='3d')
+        miniframe = tk.Frame(self.part_window)
+        self.part_window.add(miniframe, text='-')
+        canvas_plot = FigureCanvasTkAgg(self.fig2, miniframe)
+        canvas_plot.get_tk_widget().pack(fill='both', side='top', expand=True)
+        # Caja de informacion vacia
+        self.infobox = tk.LabelFrame(miniframe, text='Datos del punto')
+        self.infobox.pack(fill='both', side='bottom', expand=True)
+        self.infolabel = tk.Label(self.infobox, text='\n\n\n\n\n\n\n\n\n', font=('Arial', '14'))
+        self.infolabel.pack(fill='both', expand=True)
 
     def part_window(self):
         # Marco global de Parte
         self.frame = ttk.Frame(self.main)
         self.frame.place(relwidth=1, relheight=1)
+        n_cols=3
+        n_rows = 4
+        weight = 1
+        for i in range(0, n_cols):
+            tk.Grid.columnconfigure(self.frame, i, weight=weight)
 
+        for i in range(0, n_rows):
+            if i in [0,1,2]:
+                tk.Grid.rowconfigure(self.frame, i, weight=0)
+            else:
+                tk.Grid.rowconfigure(self.frame, i, weight=weight)
         # Titulo
         title = 'Ajustes de Visualizacion-' + str(self.plane_type)
         self.label2 = ttk.Label(self.frame, text=title)
-        self.label2.place(relx=.01, rely=.01)
+        self.label2.grid(row=0, column=0, sticky='w', columnspan=3, pady=(0, 0), padx=(10, 10))
         # Separator
         self.separator = ttk.Separator(self.frame)
-        self.separator.place(relx=.01, rely=.08, relwidth=.8)
-        # Cuadro de ajustes
-        self.labelframe1 = tk.LabelFrame(self.frame, text='Ajustes de Parte', width=1000, height=700)
-        self.labelframe1.place(relx=.01, rely=.2)
+        self.separator.grid(row=1, column=0, columnspan=3, sticky='we', pady=(20,30), padx=(10, 10))
+        # Button de pieza/cuadrante
+        self.button1 = ttk.Combobox(self.frame, state='readonly', values=['Part', 'Quadrant'], width=8)
+        self.button1.grid(row=2, column=0, sticky='w', pady=(0, 20), padx=(10, 0))
+        self.button1.bind("<<ComboboxSelected>>", self.set_config1)
+        # Boton start
+        self.button2 = ttk.Button(self.frame, text='VER PARTE', style='AccentButton',
+                                  command=lambda: [self.set_part(),
+                                                   self.plot_part(self.all_parts, self.selected_part)])
+        self.button2.grid(row=2, column=1, sticky='w', pady=(0, 20))
+
+        # Cuadro de partes
+        self.labelframe1 = tk.LabelFrame(self.frame, text='Ajustes de Parte')
+        self.labelframe1.grid(row=3, column=0, columnspan=2, sticky='wens', padx=(10, 10), pady=(0, 20))
+        for i in range(0, 2):
+            tk.Grid.columnconfigure(self.labelframe1, i, weight=1)
+        for i in range(0, 2):
+            if i == 0:
+                tk.Grid.rowconfigure(self.labelframe1, i, weight=0)
+            else:
+                tk.Grid.rowconfigure(self.labelframe1, i, weight=1)
+
         self.label3 = ttk.Label(self.labelframe1, text='Nombre de parte')
-        self.label3.place(relx=.02, rely=.02)
+        self.label3.grid(row=0, column=0, sticky='we')
         # Entrada de texto
-        self.entry1 = ttk.Entry(self.labelframe1, width=20)
+        self.entry1 = ttk.Entry(self.labelframe1)
         self.entry1.bind("<KeyRelease>", self.check_part_name)
-        self.entry1.place(relx=.4, rely=.02)
+        self.entry1.grid(row=0, column=1, sticky='we')
         # Lista de partes
         self.list_frame = tk.Frame(self.labelframe1)
-        self.list_frame.place(relx=.02, rely=.15)
-        self.list1 = tk.Listbox(self.list_frame, bd=0, width=40, bg='#737373', selectbackground='#007fff')
+        self.list_frame.grid(row=1, column=0, columnspan=2, sticky='wens')
+        self.list1 = tk.Listbox(self.list_frame, bd=0, bg='#737373', selectbackground='#007fff')
         self.update_parts_list(self.part_names)
-        self.list1.pack(side='left')
+        self.list1.pack(side='left', fill='both', expand=True)
         # Scrollbar
         self.scroll = tk.Scrollbar(self.list_frame, orient='vertical', width=25)
         self.scroll.config(command=self.list1.yview)
         self.scroll.pack(side='right', fill='y')
         self.list1.config(yscrollcommand=self.scroll.set)
-        # Boton start
-        self.button2 = ttk.Button(self.frame, text='VER PARTE', style='AccentButton',
-                                  command=lambda: [self.set_part(),
-                                                   self.plot_part(self.all_parts, self.selected_part)])
-        self.button2.place(relx=.7, rely=.1)
-        # Button de pieza/cuadrante
-        self.button1 = ttk.Combobox(self.frame, state='readonly', values=['Part', 'Quadrant'])
-        self.button1.place(relx=.01, rely=.1)
-        self.button1.bind("<<ComboboxSelected>>", self.set_config1)
+
+        # Plot vacio
+        self.fig_2 = plt.figure()
+        self.fig_2ax_2 = self.fig_2.add_subplot(projection='3d')
+        self.fig_2ax_2.set_title('Selecciona parte')
+
+        # Crear el widget
+        miniframe = tk.LabelFrame(self.frame, text='Selecciona Parte')
+        miniframe.grid(row=3, column=2, sticky='ewns', pady=(0, 20), padx=(0, 10))
+
+        self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
+        self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
 
     def select_quadrant(self):
         self.selected_quadrant = self.q.get()
@@ -371,9 +428,6 @@ class App:
                     data.append(name)
         self.update_parts_list(data)
 
-    def delete_part_text_info(self):
-        self.infolabel.config(text='')
-
     # Methods
     def on_pick_point(self, event):
         thisline = event.artist
@@ -398,7 +452,6 @@ class App:
             self.clicked_point.part_4,
             self.clicked_point.part_5,
             self.clicked_point.part_6)
-        self.infolabel.config(text=self.point_info_text)
 
         for part_name in self.clicked_point.part_names:
             if self.part_names != '-':
@@ -442,22 +495,26 @@ class App:
                 x.remove(clicked_point.xe)
                 y.remove(clicked_point.ye)
                 z.remove(clicked_point.ze)
-                fig2 = plt.figure(figsize=(6, 4))
+                fig2 = plt.figure()
                 ax_2 = fig2.add_subplot(projection='3d')
                 ax_2.scatter(x, y, z, color='blue')
                 ax_2.scatter(clicked_point.xe, clicked_point.ye, clicked_point.ze, color='red')
                 ax_2.set_title(part_name)
 
                 # Create widget
-                miniframe = tk.Frame(self.part_window, height=500, width=600)
+                miniframe = tk.Frame(self.part_window)
                 self.part_window.add(miniframe, text=part_name)
                 canvas_plot = FigureCanvasTkAgg(fig2, miniframe)
-                canvas_plot.get_tk_widget().pack(fill='both', side='top')
+                canvas_plot.get_tk_widget().pack(fill='both', side='top', expand=True)
+                # Caja de informacion
+                infobox = tk.LabelFrame(miniframe, text='Datos del punto')
+                infobox.pack(fill='both', side='bottom', expand=True)
+                infolabel = tk.Label(infobox, text=self.point_info_text, font=('Arial', '14'))
+                infolabel.pack(fill='both')
 
                 # Close part button
                 button = ttk.Button(miniframe, text='X', style='AccentButton',
-                                    command=lambda: [miniframe.destroy(), button.destroy(),
-                                                     self.delete_part_text_info()])
+                                    command=lambda: [miniframe.destroy(), button.destroy()])
                 button.place(relx=.9, rely=0, width=60, height=60)
                 break
 
@@ -471,11 +528,11 @@ class App:
                 self.fig_2.canvas.mpl_connect('pick_event', self.on_pick_point_3D) # WIP
 
                 # Crear el widget
-                miniframe = tk.LabelFrame(self.frame, height=800, width=900, text=part_name)
-                miniframe.place(relx=.6, rely=.2)
+                miniframe = tk.LabelFrame(self.frame, text=part_name)
+                miniframe.grid(row=3, column=2, sticky='ewns', pady=(0, 20), padx=(0, 10))
 
                 self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
-                self.canvas_part.get_tk_widget().pack(fill='both', side='top')
+                self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
                 break
 
     def plot_quadrant(self):
@@ -493,7 +550,7 @@ class App:
 
         # Crear el widget
         miniframe = tk.LabelFrame(self.frame2, text='Cuadrante')
-        miniframe.place(relx=.01, rely=.2)
+        miniframe.grid(row=3, column=0, rowspan=2, columnspan=2, sticky='ewns', pady=(0, 20), padx=(10, 10))
 
         self.canvas_plot = FigureCanvasTkAgg(self.fig, miniframe)
         self.canvas_plot.get_tk_widget().pack(fill='both', side='top')
