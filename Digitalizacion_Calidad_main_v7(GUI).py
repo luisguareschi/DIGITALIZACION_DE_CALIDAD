@@ -222,7 +222,7 @@ class App:
     # GUI Functions
     def quadrant_window(self):
         # Marco global de Cuadrante
-        self.frame2 = ttk.Frame(self.main)
+        self.frame2 = tk.Frame(self.main)
         self.frame2.place(relwidth=1, relheight=1)
         n_cols=4
         n_rows = 5
