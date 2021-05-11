@@ -4,3 +4,4 @@ class Part:
         self.x = x
         self.y = y
         self.z = z
+

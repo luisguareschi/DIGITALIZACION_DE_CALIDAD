@@ -85,5 +85,6 @@ def visualize3DData(A, B, Name, IDs):
 if __name__ == '__main__':
     A = CFRP
     B = NO_CFRP
+    print(A)
     visualize3DData(A, B, Name, IDs)
 

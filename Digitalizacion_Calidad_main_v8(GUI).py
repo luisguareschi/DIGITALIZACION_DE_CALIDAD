@@ -3,13 +3,13 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Cursor
+from mpl_toolkits.mplot3d import proj3d
 from POINT import Point
 from PART import Part
 import tkinter as tk
 from tkinter import ttk, font
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.backend_bases import cursors
-
 
 class App:
     def __init__(self):
@@ -245,15 +245,13 @@ class App:
         # Button de pieza/cuadrante
         self.button3 = ttk.Combobox(self.frame2, state='readonly', values=['Part', 'Quadrant'], width=8)
         self.button3.grid(row=2, column=0, sticky='w', pady=(0, 20), padx=(10, 0))
+        self.button3.current(1)
         self.button3.bind("<<ComboboxSelected>>", self.set_config2)
         # Boton de seleccionar cuadrante
-        self.button4 = ttk.Combobox(self.frame2, state='readonly', values=['Upper', 'Lower', 'Right', 'Left'])
+        self.button4 = ttk.Combobox(self.frame2, state='readonly', values=['Selecciona un cuadrante','Upper', 'Lower', 'Right', 'Left'])
         self.button4.grid(row=2, column=1, sticky='w', pady=(0, 20))
+        self.button4.current(0)
         self.button4.bind("<<ComboboxSelected>>", self.set_quadrant)
-        # Boton start
-        self.button2 = ttk.Button(self.frame2, text='Start', style='AccentButton',
-                                  command=lambda: [self.load_quadrant()])
-        self.button2.grid(row=2, column=2, sticky='w', pady=(0, 20))
         # Cuadrante vacio
         self.fig = plt.figure(dpi=100, frameon=False, figsize=(5, 4))
         self.figure = self.fig.add_subplot()
@@ -262,7 +260,7 @@ class App:
         miniframe.grid(row=3, column=0, rowspan=2, columnspan=2, sticky='ewns', pady=(0, 20), padx=(10, 10))
         self.canvas_plot = FigureCanvasTkAgg(self.fig, miniframe)
         self.canvas_plot.get_tk_widget().pack(fill='both', side='top', expand=True)
-        toolbar = NavigationToolbar2Tk(self.canvas_plot, miniframe)
+        toolbar = NavigationToolbar2Tk(self.canvas_plot, miniframe).pack(fill='both', side='top', expand=True)
         # Visualizador de partes/info
         self.part_window = ttk.Notebook(self.frame2)
         self.part_window.grid(row=3, column=2, sticky='wens', columnspan=2, rowspan=2, pady=(0, 20), padx=(0, 10))
@@ -388,6 +386,8 @@ class App:
 
     def set_quadrant(self, event):
         self.selected_quadrant = self.button4.get()
+        if self.selected_quadrant == 'Selecciona un cuadrante':
+            return
         if self.plane_type == 'v1000':
             if self.selected_quadrant == 'Left':
                 self.selected_quadrant = 'Izquierdo'
@@ -397,6 +397,29 @@ class App:
                 self.selected_quadrant = 'Superior'
             elif self.selected_quadrant == 'Lower':
                 self.selected_quadrant = 'Inferior'
+        # Lista con puntos que unicamente cumplen todos los criterios de herramienta, cuadrante etc (color rojo)
+        self.selected_points = []
+        for point in self.all_points:
+            if any(x in point.process_f_name for x in self.matchers):
+                if point.tool_1 in self.selected_tool_types_1:
+                    if point.tool in self.selected_tool_types:
+                        if point.quadrant == self.selected_quadrant:
+                            self.selected_points.append(point)
+
+        # Lista con todos los puntos del cuadrante
+        self.quadrant_points = []
+        for point in self.all_points:
+            if point.quadrant == self.selected_quadrant:
+                self.quadrant_points.append(point)
+
+        self.X_quadrant, self.Y_quadrant, self.Z_quadrant = self.get_cords(
+            self.quadrant_points)  # Puntos que se ven de color negro
+
+        self.X_selected, self.Y_selected, self.Z_selected = self.get_cords(
+            self.selected_points)  # Puntos que se ven de color rojo
+
+        # Hacer plot de cuadrante
+        self.plot_quadrant()
 
     def set_planetype(self, value):
         self.plane_type = value
@@ -517,7 +540,7 @@ class App:
                                     command=lambda: [miniframe.destroy(), button.destroy()])
                 button.place(relx=.9, rely=0, width=60, height=60)
                 break
-
+    '''
     def plot_part(self, all_parts, part_name):
         for part in all_parts:
             if part.name == part_name and part_name != '-':
@@ -534,7 +557,7 @@ class App:
                 self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
                 self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
                 break
-
+    '''
     def plot_quadrant(self):
         self.fig = plt.figure(dpi=100, frameon=False, figsize=(6, 5))
         self.figure = self.fig.add_subplot()
@@ -553,32 +576,107 @@ class App:
         miniframe.grid(row=3, column=0, rowspan=2, columnspan=2, sticky='ewns', pady=(0, 20), padx=(10, 10))
 
         self.canvas_plot = FigureCanvasTkAgg(self.fig, miniframe)
-        self.canvas_plot.get_tk_widget().pack(fill='both', side='top')
-        toolbar = NavigationToolbar2Tk(self.canvas_plot, miniframe)
+        self.canvas_plot.get_tk_widget().pack(fill='both', side='top', expand=True)
+        toolbar = NavigationToolbar2Tk(self.canvas_plot, miniframe).pack(fill='both', side='top', expand=True)
 
-    def load_quadrant(self):
-        # Lista con puntos que unicamente cumplen todos los criterios de herramienta, cuadrante etc (color rojo)
-        self.selected_points = []
-        for point in self.all_points:
-            if any(x in point.process_f_name for x in self.matchers):
-                if point.tool_1 in self.selected_tool_types_1:
-                    if point.tool in self.selected_tool_types:
-                        if point.quadrant == self.selected_quadrant:
-                            self.selected_points.append(point)
+    def plot_part(self, all_parts, part_name):
+        for part in all_parts:
+            if part.name == part_name and part_name != '-':
+                coords_array = pd.DataFrame({'X': part.x, 'Y': part.y, 'Z': part.z}).to_numpy()  # Nparray
+                point_names, point_ids, point_parts = self.get_part_info(part)
+                self.visualize3DData_Part(coords_array, point_names, point_ids, part, point_parts)
+                break
 
-        # Lista con todos los puntos del cuadrante
-        self.quadrant_points = []
-        for point in self.all_points:
-            if point.quadrant == self.selected_quadrant:
-                self.quadrant_points.append(point)
+    def visualize3DData_Part(self, A, Name, IDs, part, point_parts):
+        """Visualize data in 3d plot with popover next to mouse position"""
+        self.fig_2 = plt.figure(figsize=(5,4))
+        self.fig_2ax_2 = self.fig_2.add_subplot(projection='3d')
+        self.fig_2ax_2.scatter(part.x, part.y, part.z, color='blue')
+        self.fig_2ax_2.set_title(part.name)
 
-        self.X_quadrant, self.Y_quadrant, self.Z_quadrant = self.get_cords(
-            self.quadrant_points)  # Puntos que se ven de color negro
+        def distance(point, event):
+            """Return distance between mouse position and given data point
 
-        self.X_selected, self.Y_selected, self.Z_selected = self.get_cords(
-            self.selected_points)  # Puntos que se ven de color rojo
+            Args:
+                point (np.array): np.array of shape (3,), with x,y,z in data coords
+                event (MouseEvent): mouse event (which contains mouse position in .x and .xdata)
+            Returns:
+                distance (np.float64): distance (in screen coords) between mouse pos and data point
+            """
+            assert point.shape == (3,), "distance: point.shape is wrong: %s, must be (3,)" % point.shape
 
-        # Hacer plot de cuadrante
-        self.plot_quadrant()
+            # Project 3d data space to 2d data space
+            x2, y2, _ = proj3d.proj_transform(point[0], point[1], point[2], plt.gca().get_proj())
+            # Convert 2d data space to 2d screen space
+            x3, y3 = self.fig_2ax_2.transData.transform((x2, y2))
+
+            return np.sqrt((x3 - event.x) ** 2 + (y3 - event.y) ** 2)
+
+        def calcClosestDatapoint(A, event):
+            """"Calculate which data point is closest to the mouse position.
+
+            Args:
+                A (np.array) - array of points, of shape (numPoints, 3)
+                event (MouseEvent) - mouse event (containing mouse position)
+            Returns:
+                smallestIndex (int) - the index (into the array of points A) of the element closest to the mouse position
+            """
+            distances = [distance(A[i, 0:3], event) for i in range(A.shape[0])]
+            return np.argmin(distances)
+
+        def annotatePlot(A, index):
+            """Create popover label in 3d chart
+
+            Args:
+                A (np.array) - array of points, of shape (numPoints, 3)
+                index (int) - index (into points array A) of item which should be printed
+            Returns:
+                None
+            """
+            # If we have previously displayed another label, remove it first
+            if hasattr(annotatePlot, 'label'):
+                annotatePlot.label.remove()
+            # Get data point from array of points X, at position index
+            x2, y2, _ = proj3d.proj_transform(A[index, 0], A[index, 1], A[index, 2], self.fig_2ax_2.get_proj())
+            annotatePlot.label = plt.annotate("Name:{}\nID:{}\nPartes:{} ".format(Name[index], IDs[index], point_parts[index][0]),
+                                              xy=(x2, y2), xytext=(-20, 20), textcoords='offset points', ha='right',
+                                              va='bottom',
+                                              bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
+                                              arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+            self.fig_2.canvas.draw()
+
+        def onMouseMotion(event):
+            """Event that is triggered when mouse is moved. Shows text annotation over data point closest to mouse."""
+            closestIndex = calcClosestDatapoint(A, event)
+            annotatePlot(A, closestIndex)
+
+        self.fig_2.canvas.mpl_connect('motion_notify_event', onMouseMotion)  # on mouse motion
+        # Crear el widget
+        miniframe = tk.LabelFrame(self.frame, text=part.name)
+        miniframe.grid(row=3, column=2, sticky='ewns', pady=(0, 20), padx=(0, 10))
+
+        self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
+        self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
+
+    def get_part_info(self, part):
+        point_names = []
+        point_ids = []
+        point_parts = []
+        for i in range(0, len(part.x)):
+            point = self.find_pointXYZ(self.all_points, part.x[i], part.y[i], part.z[i])
+            point_names.append(point.process_f_name)
+            point_ids.append(point.id)
+            parts_list = point.part_names
+            string = ''
+            while '-' in parts_list:
+                parts_list.remove('-')
+            for name in parts_list:
+                string = string+'{}\n'.format(name)
+            list2 = [string]
+            point_parts.append(list2)
+        return point_names, point_ids, point_parts
+
 
 app = App()
+
+
