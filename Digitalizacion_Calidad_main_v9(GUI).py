@@ -6,10 +6,13 @@ from matplotlib.widgets import Cursor
 from mpl_toolkits.mplot3d import proj3d
 from POINT import Point
 from PART import Part
+from REGISTERED_POINT import RegisteredPoint
+from FILE_INFO import FileInfo
 import tkinter as tk
 from tkinter import ttk, font
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.backend_bases import cursors
+from openpyxl import load_workbook
 
 class App:
     def __init__(self):
@@ -163,8 +166,8 @@ class App:
         style.theme_use('azure')
 
         # Screen settings
-        windowWidth = 300
-        windowHeight = 200
+        windowWidth = 800
+        windowHeight = 800
         screenWidth = self.start_screen.winfo_screenwidth()
         screenHeight = self.start_screen.winfo_screenheight()
         xCordinate = int((screenWidth / 2) - (windowWidth / 2))
@@ -177,27 +180,9 @@ class App:
         # Overriding default-font with custom settings
         # i.e changing font-family, size and weight
         self.defaultFont.configure(family=None,
-                                   size=12,
+                                   size=18,
                                    weight=font.NORMAL)
-
-        # Main Menu Window
-        self.frame = ttk.LabelFrame(self.start_screen, text='Tipo de avion')
-        self.frame.pack(fill='both', expand=True, padx=15, pady=15)
-        for i in range(0, 2):
-            self.frame.columnconfigure(i, weight=1)
-        for i in range(0, 2):
-            self.frame.rowconfigure(i, weight=1)
-
-        self.label1 = ttk.Label(self.frame, text='\nSelecciona el tipo de avion:')
-        self.label1.grid(row=0, column=0, columnspan=2, padx=10)
-        self.button1 = ttk.Button(self.frame, text='v900', style='AccentButton',
-                                  command=lambda: [self.set_planetype('v900'),
-                                                   self.change_state('LOADING')])
-        self.button1.grid(row=1, column=0)
-        self.button2 = ttk.Button(self.frame, text='v1000', style='AccentButton',
-                                  command=lambda: [self.set_planetype('v1000'),
-                                                   self.change_state('LOADING')])
-        self.button2.grid(row=1, column=1, ipady=0, padx=0)
+        self.select_record_window()
 
     def draw_main_gui(self):
         self.main = tk.Tk()
@@ -220,6 +205,127 @@ class App:
         self.quadrant_window()
 
     # GUI Functions
+    def select_record_window(self):
+        # Main Menu Window
+        self.frame1 = ttk.Frame(self.start_screen)
+        self.frame1.place(relwidth=1, relheight=1)
+        n_cols=2
+        n_rows = 2
+        weight = 1
+        for i in range(0, n_cols):
+            tk.Grid.columnconfigure(self.frame1, i, weight=weight)
+
+        for i in range(0, n_rows):
+            if i in [0]:
+                tk.Grid.rowconfigure(self.frame1, i, weight=0)
+            else:
+                tk.Grid.rowconfigure(self.frame1, i, weight=weight)
+
+        # Titulo
+        self.title1 = tk.Label(self.frame1, text='Digitalizacion de Calidad', font=('Arial', '24'))
+        self.title1.grid(row=0, column=0, sticky='w', padx=10)
+        # Lista de archivos
+        self.files_frame = tk.LabelFrame(self.frame1, text='Selecciona un registro')
+        self.files_frame.grid(row=1, column=0, columnspan=2, sticky='ewns', padx=10,pady=10)
+        for i in range(0, 2):
+            tk.Grid.columnconfigure(self.files_frame, i, weight=1)
+        for i in range(0, 2):
+            if i == 0:
+                tk.Grid.rowconfigure(self.files_frame, i, weight=0)
+            else:
+                tk.Grid.rowconfigure(self.files_frame, i, weight=1)
+        self.label1 = ttk.Label(self.files_frame, text='Nombre de parte')
+        self.label1.grid(row=0, column=0, sticky='we', padx=5)
+        # Entrada de texto
+        self.entry1 = ttk.Entry(self.files_frame)
+        self.entry1.bind("<KeyRelease>", self.check_file_name)
+        self.entry1.grid(row=0, column=1, sticky='we')
+        # Lista de partes
+        self.list_frame = tk.Frame(self.files_frame)
+        self.list_frame.grid(row=1, column=0, columnspan=3, sticky='wens')
+        self.list1 = tk.Listbox(self.list_frame, bd=0, bg='#737373', selectbackground='#007fff')
+
+        self.files_list = []
+        self.all_files_info = self.read_file_names()
+        for file in self.all_files_info:
+            self.files_list.append(file.name)
+        self.update_parts_list(self.files_list)
+        self.list1.pack(side='left', fill='both', expand=True)
+        # Scrollbar
+        self.scroll = tk.Scrollbar(self.list_frame, orient='vertical', width=25)
+        self.scroll.config(command=self.list1.yview)
+        self.scroll.pack(side='right', fill='y')
+        self.list1.config(yscrollcommand=self.scroll.set)
+        # Boton de agregar un nuevo registro
+        self.button5 = ttk.Button(self.files_frame, text='Nuevo Registro', style='AccentButton',
+                                  command=lambda: [self.new_record_window()])
+        self.button5.grid(row=0, column=2, sticky='s', padx=10, pady=(0, 5))
+        # Boton de Start
+        self.button6 = ttk.Button(self.frame1, text='START', style='AccentButton',
+                                  command=lambda: [self.set_active_record(), self.change_state('LOADING')])
+        self.button6.grid(row=0, column=1, sticky='w')
+
+    def new_record_window(self):
+        # Start TKinter
+        self.create_record_screen = tk.Tk()
+        # Create a style
+        style = ttk.Style(self.create_record_screen)
+        self.create_record_screen.tk.call('source', 'azure.tcl')
+        style.theme_use('azure')
+
+        # Screen settings
+        windowWidth = 350
+        windowHeight = 180
+        screenWidth = self.create_record_screen.winfo_screenwidth()
+        screenHeight = self.create_record_screen.winfo_screenheight()
+        xCordinate = int((screenWidth / 2) - (windowWidth / 2))
+        yCordinate = int((screenHeight / 2) - (windowHeight / 2))
+        self.create_record_screen.geometry("{}x{}+{}+{}".format(windowWidth, windowHeight, xCordinate, yCordinate))
+
+        # Creating a Font object of "TkDefaultFont"
+        self.defaultFont = font.nametofont("TkDefaultFont")
+
+        # Overriding default-font with custom settings
+        # i.e changing font-family, size and weight
+        self.defaultFont.configure(family=None,
+                                   size=18,
+                                   weight=font.NORMAL)
+        # Frame
+        self.frame3 = tk.LabelFrame(self.create_record_screen, text='CREAR UN NUEVO REGISTRO')
+        self.frame3.pack(fill='both', expand=True, padx=15, pady=15)
+        n_cols = 2
+        n_rows = 3
+        weight = 1
+        for i in range(0, n_cols):
+            tk.Grid.columnconfigure(self.frame3, i, weight=weight)
+
+        for i in range(0, n_rows):
+            if i in [121412]:
+                tk.Grid.rowconfigure(self.frame3, i, weight=0)
+            else:
+                tk.Grid.rowconfigure(self.frame3, i, weight=weight)
+        # Nombre del registro:
+        self.label4 = tk.Label(self.frame3, text='Nombre del registro:')
+        self.label4.grid(row=0, column=0)
+        # Entrada de texto
+        self.entry3 = tk.Entry(self.frame3)
+        self.entry3.grid(row=0, column=1)
+        # Texto tipo de avion
+        self.label5 = tk.Label(self.frame3, text='Tipo de avion')
+        self.label5.grid(row=1, column=0)
+        # Tipo de avion
+        self.button7 = ttk.Combobox(self.frame3, state='readonly', values=['v900', 'v1000'])
+        self.button7.grid(row=1, column=1)
+        self.button7.bind('<<ComboboxSelected>>', self.set_plane_type)
+        # Boton crear registro
+        # self.button8 = ttk.Button(self.frame3, text='CREAR', style='AccentButton',
+        #                           command=lambda: [self.change_state('LOADING'),
+        #                                            self.add_record_info(self.entry3.get(), self.plane_type),
+        #                                            self.create_record_screen.destroy()])
+        self.button8 = ttk.Button(self.frame3, text='CREAR', style='AccentButton',
+                                  command=lambda: [self.create_record()])
+        self.button8.grid(row=2, column=0, columnspan=2)
+
     def quadrant_window(self):
         # Marco global de Cuadrante
         self.frame2 = ttk.Frame(self.main)
@@ -236,12 +342,12 @@ class App:
             else:
                 tk.Grid.rowconfigure(self.frame2, i, weight=weight)
         # Titulo
-        title = 'Ajustes de Visualizacion-' + str(self.plane_type)
+        title = 'Ajustes de Visualizacion-' + str(self.plane_type)+': '+str(self.selected_record.name)
         self.label2 = ttk.Label(self.frame2, text=title)
         self.label2.grid(row=0, column=0, sticky='w', columnspan=3, pady=(0, 0), padx=(10, 10))
         # Separator
         self.separator = ttk.Separator(self.frame2)
-        self.separator.grid(row=1, column=0, columnspan=3, sticky='we', pady=(20,30), padx=(10, 10))
+        self.separator.grid(row=1, column=0, columnspan=4, sticky='we', pady=(20,30), padx=(10, 10))
         # Button de pieza/cuadrante
         self.button3 = ttk.Combobox(self.frame2, state='readonly', values=['Part', 'Quadrant'], width=8)
         self.button3.grid(row=2, column=0, sticky='w', pady=(0, 20), padx=(10, 0))
@@ -293,7 +399,7 @@ class App:
             else:
                 tk.Grid.rowconfigure(self.frame, i, weight=weight)
         # Titulo
-        title = 'Ajustes de Visualizacion-' + str(self.plane_type)
+        title = 'Ajustes de Visualizacion-' + str(self.plane_type)+': '+str(self.selected_record.name)
         self.label2 = ttk.Label(self.frame, text=title)
         self.label2.grid(row=0, column=0, sticky='w', columnspan=3, pady=(0, 0), padx=(10, 10))
         # Separator
@@ -323,9 +429,9 @@ class App:
         self.label3 = ttk.Label(self.labelframe1, text='Nombre de parte')
         self.label3.grid(row=0, column=0, sticky='we')
         # Entrada de texto
-        self.entry1 = ttk.Entry(self.labelframe1)
-        self.entry1.bind("<KeyRelease>", self.check_part_name)
-        self.entry1.grid(row=0, column=1, sticky='we')
+        self.entry2 = ttk.Entry(self.labelframe1)
+        self.entry2.bind("<KeyRelease>", self.check_part_name)
+        self.entry2.grid(row=0, column=1, sticky='we')
         # Lista de partes
         self.list_frame = tk.Frame(self.labelframe1)
         self.list_frame.grid(row=1, column=0, columnspan=2, sticky='wens')
@@ -440,6 +546,11 @@ class App:
         for name in list:
             self.list1.insert(tk.END, name)
 
+    def update_files_list(self, list):
+        self.list1.delete(0, tk.END)
+        for name in list:
+            self.list1.insert(tk.END, name)
+
     def check_part_name(self, event):
         text = self.entry1.get()
         if text == '':
@@ -450,6 +561,37 @@ class App:
                 if text.lower() in name.lower():
                     data.append(name)
         self.update_parts_list(data)
+
+    def check_file_name(self, event):
+        text = self.entry1.get()
+        if text == '':
+            data = self.files_list
+        else:
+            data = []
+            for name in self.files_list:
+                if text.lower() in name.lower():
+                    data.append(name)
+        self.update_files_list(data)
+
+    def set_active_record(self):
+        index = self.list1.curselection()
+        selected_record_name = self.list1.get(index[0])
+        for file in self.all_files_info:
+            if selected_record_name == file.name:
+                self.selected_record = file
+                self.plane_type = self.selected_record.type
+                print(file.name, file.type)
+
+    def set_plane_type(self, event):
+        self.plane_type = self.button7.get()
+
+    def create_record(self):
+        text = self.entry3.get()
+        if text != '' and self.plane_type in ['v900', 'v1000']:
+            self.change_state('LOADING')
+            self.add_record_info(self.entry3.get(), self.plane_type)
+            self.create_record_screen.destroy()
+
 
     # Methods
     def on_pick_point(self, event):
@@ -479,9 +621,6 @@ class App:
         for part_name in self.clicked_point.part_names:
             if part_name != '-':
                 self.plot_partANDpoint(self.all_parts, part_name, self.clicked_point)
-
-    def on_pick_point_3D(self, event):  # WIP
-        pass
 
     def get_cords(self, points_list):
         Xs = []
@@ -541,24 +680,7 @@ class App:
                                     command=lambda: [miniframe.destroy(), button.destroy()])
                 button.place(relx=.9, rely=0, width=60, height=60)
                 break
-    '''
-    def plot_part(self, all_parts, part_name):
-        for part in all_parts:
-            if part.name == part_name and part_name != '-':
-                self.fig_2 = plt.figure(figsize=(5,4))
-                self.fig_2ax_2 = self.fig_2.add_subplot(projection='3d')
-                self.fig_2ax_2.scatter(part.x, part.y, part.z, color='blue')
-                self.fig_2ax_2.set_title(part_name)
-                self.fig_2.canvas.mpl_connect('pick_event', self.on_pick_point_3D) # WIP
 
-                # Crear el widget
-                miniframe = tk.LabelFrame(self.frame, text=part_name)
-                miniframe.grid(row=3, column=2, sticky='ewns', pady=(0, 20), padx=(0, 10))
-
-                self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
-                self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
-                break
-    '''
     def plot_quadrant(self):
         self.fig = plt.figure(dpi=100, frameon=False, figsize=(6, 5))
         self.figure = self.fig.add_subplot()
@@ -677,6 +799,30 @@ class App:
             point_parts.append(list2)
         return point_names, point_ids, point_parts
 
+    def read_file_names(self):
+        main_root = os.path.dirname(os.path.abspath(__file__))
+        file_root = os.path.join(main_root, 'Created_records.xlsx')
+        excel = pd.read_excel(file_root)
+        names = excel['record_name']
+        types = excel['type']
+        all_files_info = []
+        for i in range(len(names)):
+            name = names[i]
+            type = types[i]
+            info = FileInfo(name, type)
+            all_files_info.append(info)
+        return all_files_info
+
+    def add_record_info(self, name, planetype):
+        file = FileInfo(name, planetype)
+        self.selected_record = file
+        main_root = os.path.dirname(os.path.abspath(__file__))
+        file_root = os.path.join(main_root, 'Created_records.xlsx')
+        excel = load_workbook(filename=file_root)
+        sheet = excel['Sheet1']
+        new_row = [file.name, file.type]
+        sheet.append(new_row)
+        excel.save('Created_records.xlsx')
 
 app = App()
 
