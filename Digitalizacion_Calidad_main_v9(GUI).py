@@ -13,6 +13,7 @@ from tkinter import ttk, font
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.backend_bases import cursors
 from openpyxl import load_workbook
+from tkintertable import TableCanvas, TableModel
 
 class App:
     def __init__(self):
@@ -28,6 +29,7 @@ class App:
         self.matchers = ['-FC-', '-FCFC-', '-FCFCFC-', '-FCFCFCFC-']  # Variable a escoger
         self.selected_tool_types_1 = [503]  # VARIABLEA ESCOGER
         self.selected_tool_types = ['ADH', 'TDRILL']  # VARIABLE A ESCOGER
+        self.registered_point_table_id = '-' # Contador de id necesario para crear la tabla de la GUI
 
         while True:  # Main loop
             # Run back_end code
@@ -143,6 +145,9 @@ class App:
                 p = Part(name, x, y, z)
                 self.all_parts.append(p)
 
+            # Leer registro de calidad de puntos
+            self.registered_points = self.read_record()
+
             print('Se han creado {} puntos'.format(len(self.all_points)))
             print('Se han creado {} partes'.format(len(self.all_parts)))
             self.state = 'SETTINGS'
@@ -192,11 +197,12 @@ class App:
         style.theme_use('azure')
         self.main.state('zoomed')  # Fit the whole screen
         style.configure('TNotebook.Tab', font=('Arial', '11', 'normal'))
+        style.configure('Treeview', rowheight=30, font=('Arial', '18', 'normal'))
 
         # Cambiar letra
         self.defaultFont = font.nametofont("TkDefaultFont")
         self.defaultFont.configure(family="Arial",
-                                   size=30,
+                                   size=25,
                                    weight=font.NORMAL)
         # Menu de configuracion de parte
         self.part_window()
@@ -209,7 +215,7 @@ class App:
         # Main Menu Window
         self.frame1 = ttk.Frame(self.start_screen)
         self.frame1.place(relwidth=1, relheight=1)
-        n_cols=2
+        n_cols = 2
         n_rows = 2
         weight = 1
         for i in range(0, n_cols):
@@ -226,7 +232,7 @@ class App:
         self.title1.grid(row=0, column=0, sticky='w', padx=10)
         # Lista de archivos
         self.files_frame = tk.LabelFrame(self.frame1, text='Selecciona un registro')
-        self.files_frame.grid(row=1, column=0, columnspan=2, sticky='ewns', padx=10,pady=10)
+        self.files_frame.grid(row=1, column=0, columnspan=2, sticky='ewns', padx=10, pady=10)
         for i in range(0, 2):
             tk.Grid.columnconfigure(self.files_frame, i, weight=1)
         for i in range(0, 2):
@@ -243,7 +249,7 @@ class App:
         # Lista de partes
         self.list_frame = tk.Frame(self.files_frame)
         self.list_frame.grid(row=1, column=0, columnspan=3, sticky='wens')
-        self.list1 = tk.Listbox(self.list_frame, bd=0, bg='#737373', selectbackground='#007fff')
+        self.list1 = tk.Listbox(self.list_frame, bd=0, bg='#CBCBCB', selectbackground='#007fff')
 
         self.files_list = []
         self.all_files_info = self.read_file_names()
@@ -330,31 +336,32 @@ class App:
         # Marco global de Cuadrante
         self.frame2 = ttk.Frame(self.main)
         self.frame2.place(relwidth=1, relheight=1)
-        n_cols=4
+        n_cols = 4
         n_rows = 5
         weight = 1
         for i in range(0, n_cols):
             tk.Grid.columnconfigure(self.frame2, i, weight=weight)
 
         for i in range(0, n_rows):
-            if i in [0,1,2]:
+            if i in [0, 1, 2]:
                 tk.Grid.rowconfigure(self.frame2, i, weight=0)
             else:
                 tk.Grid.rowconfigure(self.frame2, i, weight=weight)
         # Titulo
-        title = 'Ajustes de Visualizacion-' + str(self.plane_type)+': '+str(self.selected_record.name)
+        title = 'Ajustes de Visualizacion-' + str(self.plane_type) + ': ' + str(self.selected_record.name)
         self.label2 = ttk.Label(self.frame2, text=title)
         self.label2.grid(row=0, column=0, sticky='w', columnspan=3, pady=(0, 0), padx=(10, 10))
         # Separator
         self.separator = ttk.Separator(self.frame2)
-        self.separator.grid(row=1, column=0, columnspan=4, sticky='we', pady=(20,30), padx=(10, 10))
+        self.separator.grid(row=1, column=0, columnspan=4, sticky='we', pady=(20, 30), padx=(10, 10))
         # Button de pieza/cuadrante
         self.button3 = ttk.Combobox(self.frame2, state='readonly', values=['Part', 'Quadrant'], width=8)
         self.button3.grid(row=2, column=0, sticky='w', pady=(0, 20), padx=(10, 0))
         self.button3.current(1)
         self.button3.bind("<<ComboboxSelected>>", self.set_config2)
         # Boton de seleccionar cuadrante
-        self.button4 = ttk.Combobox(self.frame2, state='readonly', values=['Selecciona un cuadrante','Upper', 'Lower', 'Right', 'Left'])
+        self.button4 = ttk.Combobox(self.frame2, state='readonly',
+                                    values=['Selecciona un cuadrante', 'Upper', 'Lower', 'Right', 'Left'])
         self.button4.grid(row=2, column=1, sticky='w', pady=(0, 20))
         self.button4.current(0)
         self.button4.bind("<<ComboboxSelected>>", self.set_quadrant)
@@ -387,24 +394,23 @@ class App:
         # Marco global de Parte
         self.frame = ttk.Frame(self.main)
         self.frame.place(relwidth=1, relheight=1)
-        n_cols=3
-        n_rows = 4
+        n_cols = 3+1
+        n_rows = 5
         weight = 1
         for i in range(0, n_cols):
             tk.Grid.columnconfigure(self.frame, i, weight=weight)
-
         for i in range(0, n_rows):
-            if i in [0,1,2]:
+            if i in [0, 1, 2]:
                 tk.Grid.rowconfigure(self.frame, i, weight=0)
             else:
                 tk.Grid.rowconfigure(self.frame, i, weight=weight)
         # Titulo
-        title = 'Ajustes de Visualizacion-' + str(self.plane_type)+': '+str(self.selected_record.name)
+        title = 'Ajustes de Visualizacion-' + str(self.plane_type)
         self.label2 = ttk.Label(self.frame, text=title)
         self.label2.grid(row=0, column=0, sticky='w', columnspan=3, pady=(0, 0), padx=(10, 10))
         # Separator
         self.separator = ttk.Separator(self.frame)
-        self.separator.grid(row=1, column=0, columnspan=3, sticky='we', pady=(20,30), padx=(10, 10))
+        self.separator.grid(row=1, column=0, columnspan=3, sticky='we', pady=(20, 30), padx=(10, 10))
         # Button de pieza/cuadrante
         self.button1 = ttk.Combobox(self.frame, state='readonly', values=['Part', 'Quadrant'], width=8)
         self.button1.grid(row=2, column=0, sticky='w', pady=(0, 20), padx=(10, 0))
@@ -417,7 +423,7 @@ class App:
 
         # Cuadro de partes
         self.labelframe1 = tk.LabelFrame(self.frame, text='Ajustes de Parte')
-        self.labelframe1.grid(row=3, column=0, columnspan=2, sticky='wens', padx=(10, 10), pady=(0, 20))
+        self.labelframe1.grid(row=3, column=0, columnspan=1, sticky='wens', padx=(10, 10), pady=(0, 20), rowspan=2)
         for i in range(0, 2):
             tk.Grid.columnconfigure(self.labelframe1, i, weight=1)
         for i in range(0, 2):
@@ -429,32 +435,85 @@ class App:
         self.label3 = ttk.Label(self.labelframe1, text='Nombre de parte')
         self.label3.grid(row=0, column=0, sticky='we')
         # Entrada de texto
-        self.entry2 = ttk.Entry(self.labelframe1)
-        self.entry2.bind("<KeyRelease>", self.check_part_name)
-        self.entry2.grid(row=0, column=1, sticky='we')
+        self.entry1 = ttk.Entry(self.labelframe1, width=5)
+        self.entry1.bind("<KeyRelease>", self.check_part_name)
+        self.entry1.grid(row=0, column=1, sticky='we')
         # Lista de partes
         self.list_frame = tk.Frame(self.labelframe1)
         self.list_frame.grid(row=1, column=0, columnspan=2, sticky='wens')
-        self.list1 = tk.Listbox(self.list_frame, bd=0, bg='#737373', selectbackground='#007fff')
+        self.list1 = tk.Listbox(self.list_frame, bd=0, bg='#CBCBCB', selectbackground='#007fff')
         self.update_parts_list(self.part_names)
+        self.update_parts_list_color()
         self.list1.pack(side='left', fill='both', expand=True)
         # Scrollbar
         self.scroll = tk.Scrollbar(self.list_frame, orient='vertical', width=25)
         self.scroll.config(command=self.list1.yview)
         self.scroll.pack(side='right', fill='y')
         self.list1.config(yscrollcommand=self.scroll.set)
-
         # Plot vacio
-        self.fig_2 = plt.figure(figsize=(5,4))
+        self.fig_2 = plt.figure(figsize=(5, 4))
         self.fig_2ax_2 = self.fig_2.add_subplot(projection='3d')
         self.fig_2ax_2.set_title('Selecciona parte')
-
         # Crear el widget
         miniframe = tk.LabelFrame(self.frame, text='Selecciona Parte')
-        miniframe.grid(row=3, column=2, sticky='ewns', pady=(0, 20), padx=(0, 10))
-
+        miniframe.grid(row=3, column=1, sticky='ewns', pady=(0, 20), padx=(0, 10), rowspan=2)
         self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
         self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
+        # Crear tabla de registro
+        self.tableframe = tk.Frame(self.frame)
+        self.tableframe.grid(row=3, column=2, sticky='ewns', columnspan=2,padx=(0, 10), pady=(20, 0))
+        self.table = ttk.Treeview(self.tableframe, show='headings', columns=(1,2,3,4))
+        headers = ['Part Name', 'Quality', 'ID', 'Problem Type']
+        for i in range(0, len(headers)):
+            self.table.heading(i+1, text=headers[i], anchor='w')
+        self.table.pack(fill='both', expand=True, side='left')
+        # Barra de scroll de tabla
+        scrollbar = tk.Scrollbar(self.tableframe, orient='vertical', width=25)
+        scrollbar.config(command=self.table.yview)
+        self.table.config(yscrollcommand=scrollbar.set)
+        scrollbar.pack(fill='y', side='right')
+        # Agregar datos a la tabla
+        self.add_table_data(self.registered_points)
+        # Create item form frame
+        self.entryframe = tk.LabelFrame(self.frame, text='Registrar Punto')
+        self.entryframe.grid(row=4, column=2, sticky='ewns', columnspan=2, pady=(0, 20 ), padx=(0, 10))
+        for i in range(0, 4):
+            tk.Grid.columnconfigure(self.entryframe, i, weight=1)
+        for i in range(0, 4):
+            tk.Grid.rowconfigure(self.entryframe, i, weight=1)
+        # Label del nombre de la parte
+        label3 = ttk.Label(self.entryframe, text='Part name:')
+        label3.grid(row=0, column=0, sticky='w')
+        # Nombre de la parte
+        self.entry4 = tk.Button(self.entryframe, text=self.selected_part, bg='white', bd=0, width=22, anchor='w') # PARTE
+        self.entry4.grid(row=0, column=1, sticky='wns')
+        # Label de id
+        label2 = ttk.Label(self.entryframe, text='ID:')
+        label2.grid(row=0, column=2)
+        # Boton de id
+        self.entry6 = tk.Button(self.entryframe, text='-', bg='white', bd=0, anchor='w') # ID
+        self.entry6.grid(row=0, column=3,sticky='wns')
+        # Label de calidad
+        label = ttk.Label(self.entryframe, text='Quality:')
+        label.grid(row=1, column=0, sticky='w')
+        # Boton de calidad
+        self.entry5 = ttk.Combobox(self.entryframe, state='readonly', values=['1', '0'], width=2)
+        self.entry5.bind("<<ComboboxSelected>>", self.set_quality)
+        self.entry5.grid(row=1, column=1, sticky='wns', pady=(5, 5))
+        # Label de problem type
+        label3 = ttk.Label(self.entryframe, text='Problem Type:')
+        label3.grid(row=2, column=0, sticky='w')
+        problem_types = ['Primera sobremedida', 'Segunda sobremedida', 'Tercera sobremedida',
+                         'NC', 'Quemadura', 'Delaminacion', 'Otro']
+        # Boton de problem type
+        self.entry7 = ttk.Combobox(self.entryframe, values=problem_types, state='readonly', width=19)
+        self.entry7.grid(row=2, column=1, sticky='w', pady=(5,5))
+        # Boton de eliminar datos
+        self.button10 = ttk.Button(self.entryframe, text='Delete Entry', command=lambda: self.delete_entry())
+        self.button10.grid(row=2, column=3, pady=(5,5))
+        # Boton de agregar datos
+        self.button9 = ttk.Button(self.entryframe, text='Add', command=lambda: self.add_entry(), style='AccentButton')
+        self.button9.grid(row=3, column=3, pady=(5,5))
 
     def select_quadrant(self):
         self.selected_quadrant = self.q.get()
@@ -478,6 +537,20 @@ class App:
             self.configuration = 'Quadrant'
             self.frame2.tkraise()
             self.button3.current(1)
+
+    def set_quality(self, event):
+        print(self.entry5.get())
+        if str(self.entry5.get()) == '1':
+            self.entry6.config(text=self.selected_registered_point_id)
+            problem_types = ['Primera sobremedida', 'Segunda sobremedida', 'Tercera sobremedida',
+                             'NC', 'Quemadura', 'Delaminacion', 'Otro']
+            # Boton de problem type
+            self.entry7 = ttk.Combobox(self.entryframe, values=problem_types, state='readonly', width=19)
+            self.entry7.grid(row=2, column=1, sticky='w', pady=(5,5))
+        elif str(self.entry5.get()) == '0':
+            self.entry6.config(text='-')
+            self.entry7 = tk.Button(self.entryframe, text='-', bg='white', bd=0)
+            self.entry7.grid(row=2, column=1,sticky='ewns')
 
     def set_config2(self, event):
         print(self.button3.get())
@@ -589,9 +662,157 @@ class App:
         text = self.entry3.get()
         if text != '' and self.plane_type in ['v900', 'v1000']:
             self.change_state('LOADING')
+            # Anadir registro a la lista de registros creados
             self.add_record_info(self.entry3.get(), self.plane_type)
+            # Crear archivo excel
+            main_root = os.path.dirname(os.path.abspath(__file__))
+            f = os.path.join(main_root, 'Records')
+            file_root = os.path.join(f, 'Empty_record.xlsx')
+            print(file_root)
+            excel = load_workbook(filename=file_root)
+            sheet = excel['Sheet1']
+            new_file_root = os.path.join(f, str(self.selected_record.name) + '.xlsx')
+            print(new_file_root)
+            excel.save(new_file_root)
+            # Cerrar pantalla de creacion de registro
             self.create_record_screen.destroy()
 
+    def add_entry(self):
+        if str(self.entry5.get()) == '1':
+            point = RegisteredPoint(self.entry4['text'], self.entry5.get(),
+                                    self.entry6['text'], self.entry7.get())
+        elif str(self.entry5.get()) == '0':
+            point = RegisteredPoint(self.entry4['text'], self.entry5.get(),
+                                    self.entry6['text'], self.entry7['text'])
+        if point.part_name != '' and point.quality != '' and point.id != '' and point.problem_type != '':
+            for registered_point in self.registered_points:
+                if point.id == '-' and point.part_name == registered_point.part_name:
+                    tk.messagebox.showerror(title='Error al registrar', message='La parte ya fue registrada')
+                    return
+                if point.id == registered_point.id and point.id != '-':
+                    tk.messagebox.showerror(title='Error al registrar', message='El punto ya fue registrado')
+                    return
+                if point.part_name == registered_point.part_name and registered_point.id == '-':
+                    tk.messagebox.showerror(title='Error al registrar', message='La parte ya fue registrada')
+                    return
+            self.table.insert(parent='', index=self.registered_point_table_id,
+                              iid=self.registered_point_table_id,
+                              values=(point.part_name, point.quality, point.id, point.problem_type))
+            self.registered_point_table_id += 1
+            self.update_registry(point)
+            self.registered_points.append(point)
+            self.update_parts_list_color()
+
+    def delete_entry(self):
+        def set_to_delete_part_ids(event):
+            part_name = button.get()
+            ids = []
+            for point in self.registered_points:
+                if point.part_name == part_name:
+                    ids.append(point.id)
+            button2.config(values=ids)
+
+        def check_input(event):
+            value = button.get()
+            if value == '':
+                button.config(values=part_names)
+            else:
+                data = []
+                for item in part_names:
+                    if value.lower() in item.lower():
+                        data.append(item)
+                button.config(values=data)
+
+        def delete_selected_entry(): # WIPPPPPPP
+            part_name = str(button.get())
+            id = button2.get()
+            try:
+                id = int(id)
+            except:
+                pass
+            if part_name not in part_names:
+                tk.messagebox.showerror(title='Error al eliminar', message='Introduce un nombre de parte valido')
+                return
+            point_to_del = None
+            row = 2
+            row_number = None
+            index = 0
+            for point in self.registered_points:
+                if point.part_name == part_name and point.id == id:
+                    row_number = row
+                    self.registered_points.pop(index)
+                    break
+                elif point.part_name == part_name and point.id == str(id):
+                    row_number = row
+                    self.registered_points.pop(index)
+                    break
+                row = row+1
+                index = index + 1
+            color_index = self.part_names.index(part_name)
+            self.list1.itemconfig(color_index, bg='#737373')
+            self.update_parts_list_color()
+            main_root = os.path.dirname(os.path.abspath(__file__))
+            f = os.path.join(main_root, 'Records')
+            file_root = os.path.join(f, str(self.selected_record.name) + '.xlsx')
+            excel = load_workbook(filename=file_root)
+            sheet = excel['Sheet1']
+            sheet.delete_rows(row_number, 1)
+            excel.save(file_root)
+            self.add_table_data(self.registered_points)
+            delete_entry_screen.destroy()
+
+        # Start TKinter
+        delete_entry_screen = tk.Tk()
+        # Create a style
+        style = ttk.Style(delete_entry_screen)
+        delete_entry_screen.tk.call('source', 'azure.tcl')
+        style.theme_use('azure')
+
+        # Screen settings
+        windowWidth = 300
+        windowHeight = 180
+        screenWidth = delete_entry_screen.winfo_screenwidth()
+        screenHeight = delete_entry_screen.winfo_screenheight()
+        xCordinate = int((screenWidth / 2) - (windowWidth / 2))
+        yCordinate = int((screenHeight / 2) - (windowHeight / 2))
+        delete_entry_screen.geometry("{}x{}+{}+{}".format(windowWidth, windowHeight, xCordinate, yCordinate))
+        part_names = []
+        ids = []
+        for point in self.registered_points:
+            part_names.append(point.part_name)
+        # Frame
+        frame = tk.LabelFrame(delete_entry_screen, text='Eliminar un dato del registro')
+        frame.pack(fill='both', expand=True, padx=15, pady=15)
+        n_cols = 2
+        n_rows = 3
+        weight = 1
+        for i in range(0, n_cols):
+            tk.Grid.columnconfigure(frame, i, weight=weight)
+        for i in range(0, n_rows):
+            tk.Grid.rowconfigure(frame, i, weight=weight)
+        # Label de nombre de parte
+        label = tk.Label(frame, text='Part Name:', anchor='w')
+        label.grid(row=0, column=0, sticky='w')
+        # Boton de parte
+        button = ttk.Combobox(frame, values=part_names, width=22)
+        button.grid(row=0, column=1, sticky='w', pady=5)
+        button.bind("<<ComboboxSelected>>", set_to_delete_part_ids)
+        button.bind('<KeyRelease>', check_input)
+        # Label de ID
+        label2 = tk.Label(frame, text='ID:', anchor='w')
+        label2.grid(row=1, column=0, sticky='w')
+        # Boton de id
+        button2 = ttk.Combobox(frame, values=ids, width=10, state='readonly')
+        button2.grid(row=1, column=1, sticky='w')
+
+        # Boton de borrar
+        button3 = ttk.Button(frame, text='Delete', style='AccentButton', command=lambda: delete_selected_entry())
+        button3.grid(row=2, column=0, pady=5, columnspan=2)
+
+    def update_parts_list_color(self):
+        for point in self.registered_points:
+            index = self.part_names.index(point.part_name)
+            self.list1.itemconfig(index, bg='#737373')
 
     # Methods
     def on_pick_point(self, event):
@@ -651,14 +872,15 @@ class App:
     def plot_partANDpoint(self, all_parts, part_name, clicked_point):
         for part in all_parts:
             if part.name == part_name and part_name != '-':
-                print('Coords del punto seleccionado: ({}, {}, {})'.format(clicked_point.xe, clicked_point.ye, clicked_point.ze))
+                print('Coords del punto seleccionado: ({}, {}, {})'.format(clicked_point.xe, clicked_point.ye,
+                                                                           clicked_point.ze))
                 x = part.x
                 y = part.y
                 z = part.z
                 x.remove(clicked_point.xe)
                 y.remove(clicked_point.ye)
                 z.remove(clicked_point.ze)
-                fig2 = plt.figure(figsize=(5,4))
+                fig2 = plt.figure(figsize=(5, 4))
                 ax_2 = fig2.add_subplot(projection='3d')
                 ax_2.scatter(x, y, z, color='blue')
                 ax_2.scatter(clicked_point.xe, clicked_point.ye, clicked_point.ze, color='red')
@@ -712,10 +934,12 @@ class App:
 
     def visualize3DData_Part(self, A, Name, IDs, part, point_parts):
         """Visualize data in 3d plot with popover next to mouse position"""
-        self.fig_2 = plt.figure(figsize=(5,4))
+        self.fig_2 = plt.figure(figsize=(5, 4))
         self.fig_2ax_2 = self.fig_2.add_subplot(projection='3d')
         self.fig_2ax_2.scatter(part.x, part.y, part.z, color='blue')
         self.fig_2ax_2.set_title(part.name)
+        self.selected_registered_point_id = 0
+        self.hover_id = 0
 
         def distance(point, event):
             """Return distance between mouse position and given data point
@@ -747,7 +971,7 @@ class App:
             distances = [distance(A[i, 0:3], event) for i in range(A.shape[0])]
             return np.argmin(distances)
 
-        def annotatePlot(A, index):
+        def annotatePlot(A, index, mouse, counter):
             """Create popover label in 3d chart
 
             Args:
@@ -757,26 +981,55 @@ class App:
                 None
             """
             # If we have previously displayed another label, remove it first
-            if hasattr(annotatePlot, 'label'):
-                annotatePlot.label.remove()
-            # Get data point from array of points X, at position index
-            x2, y2, _ = proj3d.proj_transform(A[index, 0], A[index, 1], A[index, 2], self.fig_2ax_2.get_proj())
-            annotatePlot.label = plt.annotate("Name:{}\nID:{}\nPartes:{} ".format(Name[index], IDs[index], point_parts[index][0]),
-                                              xy=(x2, y2), xytext=(-20, 20), textcoords='offset points', ha='right',
-                                              va='bottom',
-                                              bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
-                                              arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
-            self.fig_2.canvas.draw()
-
+            if mouse == True:
+                if hasattr(annotatePlot, 'label'):
+                    if counter > 0:
+                        annotatePlot.label.remove()
+                # Get data point from array of points X, at position index
+                x2, y2, _ = proj3d.proj_transform(A[index, 0], A[index, 1], A[index, 2], self.fig_2ax_2.get_proj())
+                annotatePlot.label = plt.annotate(
+                    "Name:{}\nID:{}\nPartes:{} ".format(Name[index], IDs[index], point_parts[index][0]),
+                    xy=(x2, y2), xytext=(-20, 20), textcoords='offset points', ha='right',
+                    va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.5', fc='grey', alpha=0.5),
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+                self.fig_2.canvas.draw()
+                self.hover_id = IDs[index]
+            elif mouse == False:
+                if hasattr(annotatePlot, 'label'):
+                    annotatePlot.label.remove()
+                self.fig_2.canvas.draw()
         def onMouseMotion(event):
             """Event that is triggered when mouse is moved. Shows text annotation over data point closest to mouse."""
+            global  mouse_in_plot, counter
             closestIndex = calcClosestDatapoint(A, event)
-            annotatePlot(A, closestIndex)
+            annotatePlot(A, closestIndex, mouse_in_plot, counter)
+            counter = counter + 1
+
+
+        def mouse_in(event):
+            global mouse_in_plot, counter
+            mouse_in_plot = True
+            counter = 0
+        def mouse_out(event):
+            global mouse_in_plot, counter
+            mouse_in_plot = False
+            counter = 0
+            closestIndex = calcClosestDatapoint(A, event)
+            annotatePlot(A, closestIndex, mouse_in_plot, counter)
+        def mouse_click(event):
+            self.selected_registered_point_id = self.hover_id
+            print(self.selected_registered_point_id)
+            self.entry6.config(text=self.selected_registered_point_id)
+            self.entry4.config(text=self.selected_part)
 
         self.fig_2.canvas.mpl_connect('motion_notify_event', onMouseMotion)  # on mouse motion
+        self.fig_2.canvas.mpl_connect('figure_enter_event', mouse_in)
+        self.fig_2.canvas.mpl_connect('figure_leave_event', mouse_out)
+        self.fig_2.canvas.mpl_connect('button_press_event', mouse_click)
         # Crear el widget
         miniframe = tk.LabelFrame(self.frame, text=part.name)
-        miniframe.grid(row=3, column=2, sticky='ewns', pady=(0, 20), padx=(0, 10))
+        miniframe.grid(row=3, column=1, sticky='ewns', pady=(0, 20), padx=(0, 10), rowspan=2)
 
         self.canvas_part = FigureCanvasTkAgg(self.fig_2, miniframe)
         self.canvas_part.get_tk_widget().pack(fill='both', expand=True)
@@ -794,7 +1047,7 @@ class App:
             while '-' in parts_list:
                 parts_list.remove('-')
             for name in parts_list:
-                string = string+'{}\n'.format(name)
+                string = string + '{}\n'.format(name)
             list2 = [string]
             point_parts.append(list2)
         return point_names, point_ids, point_parts
@@ -818,12 +1071,55 @@ class App:
         self.selected_record = file
         main_root = os.path.dirname(os.path.abspath(__file__))
         file_root = os.path.join(main_root, 'Created_records.xlsx')
+        print(file_root)
         excel = load_workbook(filename=file_root)
         sheet = excel['Sheet1']
         new_row = [file.name, file.type]
         sheet.append(new_row)
         excel.save('Created_records.xlsx')
 
+    def read_record(self):
+        main_root = os.path.dirname(os.path.abspath(__file__))
+        f = os.path.join(main_root, 'Records')
+        file_root = os.path.join(f, str(self.selected_record.name) + '.xlsx')
+        excel = pd.read_excel(file_root)
+        part_names = excel['part_name']
+        qualities = excel['quality']
+        ids = excel['id']
+        problem_types = excel['problem_type']
+        registered_points = []
+        for i in range(len(part_names)):
+            part_name = part_names[i]
+            quality = qualities[i]
+            id = ids[i]
+            problem_type = problem_types[i]
+            point = RegisteredPoint(part_name, quality, id, problem_type)
+            registered_points.append(point)
+        return registered_points
+
+    def add_table_data(self, registered_points_list):
+        self.registered_point_table_id = 0
+        self.table.delete(*self.table.get_children())
+        for registered_point in registered_points_list:
+            part_name = registered_point.part_name
+            quality = registered_point.quality
+            id = registered_point.id
+            problem_type = registered_point.problem_type
+            self.table.insert(parent='', index=self.registered_point_table_id,
+                              iid=self.registered_point_table_id, values=(part_name, quality, id, problem_type))
+            self.registered_point_table_id += 1
+
+    def update_registry(self, point):
+        main_root = os.path.dirname(os.path.abspath(__file__))
+        f = os.path.join(main_root, 'Records')
+        file_root = os.path.join(f, str(self.selected_record.name) + '.xlsx')
+        excel = load_workbook(filename=file_root)
+        sheet = excel['Sheet1']
+        new_row = [point.part_name, point.quality, point.id, point.problem_type ]
+        sheet.append(new_row)
+        excel.save(file_root)
+
+
+
+
 app = App()
-
-
