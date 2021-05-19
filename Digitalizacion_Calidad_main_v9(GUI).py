@@ -723,7 +723,7 @@ class App:
                         data.append(item)
                 button.config(values=data)
 
-        def delete_selected_entry(): # WIPPPPPPP
+        def delete_selected_entry():
             part_name = str(button.get())
             id = button2.get()
             try:
