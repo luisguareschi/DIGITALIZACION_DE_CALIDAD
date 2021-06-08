@@ -22,7 +22,7 @@ class App:
         self.a = 0
         self.c = 0
         self.state = 'MENU'
-        self.plane_type = '-'  # VARIABLE A ESCOGER (v900/v1000)
+        self.plane_type = '-'  # VARIABLE A ESCOGER (v900/v1000/RPB)
         self.configuration = '-'  # VARIABLE A ESCOGER (Part/Quadrant)
         self.selected_quadrant = '-'  # VARIABLE A ESCOGER (Upper/Lower/Right/Left)
         self.selected_part = '-'  # VARIABLE A ESCOGER (nombre de la parte)
@@ -50,6 +50,8 @@ class App:
                 self.xlsx_name = 'v900.xlsx'
             if self.plane_type == 'v1000':
                 self.xlsx_name = 'v1000.xlsx'
+            if self.plane_type == 'RPB':
+                self.xlsx_name = 'RPB.xlsx'
             self.file_root = os.path.join(self.main_root, self.xlsx_name)
             self.df = pd.read_excel(self.file_root)
 
@@ -113,6 +115,8 @@ class App:
                 self.part_names.remove('V5358001700000-CUT01')
             if self.plane_type == 'v1000':
                 self.part_names.remove('V5358501600400-CUT01')
+            if self.plane_type == 'RPB':
+                self.part_names.remove('V5358751500000-CUT01')
             for name in self.part_names:
                 x = []
                 y = []
@@ -314,7 +318,7 @@ class App:
         self.label5 = tk.Label(self.frame3, text='Tipo de avion')
         self.label5.grid(row=1, column=0)
         # Tipo de avion
-        self.button7 = ttk.Combobox(self.frame3, state='readonly', values=['v900', 'v1000'])
+        self.button7 = ttk.Combobox(self.frame3, state='readonly', values=['v900', 'v1000', 'RPB'])
         self.button7.grid(row=1, column=1)
         self.button7.bind('<<ComboboxSelected>>', self.set_plane_type)
         # Boton crear registro
@@ -509,7 +513,7 @@ class App:
 
     def select_quadrant(self):
         self.selected_quadrant = self.q.get()
-        if self.plane_type == 'v1000':
+        if self.plane_type in ['v1000', 'RPB']:
             if self.selected_quadrant == 'Left':
                 self.selected_quadrant = 'Izquierdo'
             elif self.selected_quadrant == 'Right':
@@ -559,7 +563,7 @@ class App:
         self.selected_quadrant = self.button4.get()
         if self.selected_quadrant == 'Selecciona un cuadrante':
             return
-        if self.plane_type == 'v1000':
+        if self.plane_type in ['v1000', 'RPB']:
             if self.selected_quadrant == 'Left':
                 self.selected_quadrant = 'Izquierdo'
             elif self.selected_quadrant == 'Right':
@@ -652,7 +656,7 @@ class App:
 
     def create_record(self):
         text = self.entry3.get()
-        if text != '' and self.plane_type in ['v900', 'v1000']:
+        if text != '' and self.plane_type in ['v900', 'v1000', 'RPB']:
             self.change_state('LOADING')
             # Anadir registro a la lista de registros creados
             self.add_record_info(self.entry3.get(), self.plane_type)
@@ -741,8 +745,7 @@ class App:
                 row = row+1
                 index = index + 1
             color_index = self.part_names.index(part_name)
-            self.list1.itemconfig(color_index, bg='#737373')
-            self.update_parts_list_color()
+            self.list1.itemconfig(color_index, bg='#CBCBCB')
             main_root = os.path.dirname(os.path.abspath(__file__))
             f = os.path.join(main_root, 'Records')
             file_root = os.path.join(f, str(self.selected_record.name) + '.xlsx')
