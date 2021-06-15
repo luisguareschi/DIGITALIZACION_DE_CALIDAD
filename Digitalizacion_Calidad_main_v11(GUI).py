@@ -400,8 +400,8 @@ class App:
         # Crear tabla de registro
         self.tableframe = tk.Label(self.frame)
         self.tableframe.grid(row=3, column=2, sticky='ewns', columnspan=1, padx=(0, 5), pady=(10, 0))
-        self.table = ttk.Treeview(self.tableframe, show='headings', columns=(1, 2, 3, 4))
-        headers = ['Part Name', 'Quality', 'ID', 'Problem']
+        self.table = ttk.Treeview(self.tableframe, show='headings', columns=(1, 2, 3, 4, 5))
+        headers = ['Part Name', 'Quality', 'ID', 'Problem', 'Quadrant']
         for i in range(0, len(headers)):
             self.table.heading(i + 1, text=headers[i], anchor='w')
         self.table.pack(fill='both', expand=True, side='left')
@@ -439,6 +439,12 @@ class App:
         self.entry5 = ttk.Combobox(self.entryframe, state='readonly', values=['1', '0'], width=2)
         self.entry5.bind("<<ComboboxSelected>>", self.set_quality)
         self.entry5.grid(row=1, column=1, sticky='wns', pady=(5, 5))
+        # Label de Quadrante
+        label4 = ttk.Label(self.entryframe, text='Quadrant:', font=('Arial', '18'))
+        label4.grid(row=1, column=3, sticky='w')
+        # Boton de Quadrante
+        self.entry8 = tk.Button(self.entryframe, text='empty', bg='white', bd=0, anchor='w', font=('Arial', '18'))  # Quadrant
+        self.entry8.grid(row=1, column=3, sticky='e')
         # Label de problem type
         label3 = ttk.Label(self.entryframe, text='Problem Type:', font=('Arial', '18'))
         label3.grid(row=2, column=0, sticky='w')
@@ -620,10 +626,10 @@ class App:
     def add_entry(self):
         if str(self.entry5.get()) == '1':
             point = RegisteredPoint(self.entry4['text'], self.entry5.get(),
-                                    self.entry6['text'], self.entry7.get())
+                                    self.entry6['text'], self.entry7.get(), self.entry8['text'])
         elif str(self.entry5.get()) == '0':
             point = RegisteredPoint(self.entry4['text'], self.entry5.get(),
-                                    self.entry6['text'], self.entry7['text'])
+                                    self.entry6['text'], self.entry7['text'], self.entry8['text'])
         if point.part_name != '' and point.quality != '' and point.id != '' and point.problem_type != '':
             for registered_point in self.registered_points:
                 if point.id == '-' and point.part_name == registered_point.part_name:
@@ -637,7 +643,7 @@ class App:
                     return
             self.table.insert(parent='', index=self.registered_point_table_id,
                               iid=self.registered_point_table_id,
-                              values=(point.part_name, point.quality, point.id, point.problem_type))
+                              values=(point.part_name, point.quality, point.id, point.problem_type, point.quadrant))
             self.registered_point_table_id += 1
             self.update_registry(point)
             self.registered_points.append(point)
@@ -955,6 +961,7 @@ class App:
             print(self.selected_registered_point_id)
             self.entry6.config(text=self.selected_registered_point_id)
             self.entry4.config(text=self.selected_part)
+            self.entry8.config(text=part.quadrant)
 
         self.fig_2.canvas.mpl_connect('motion_notify_event', onMouseMotion)  # on mouse motion
         self.fig_2.canvas.mpl_connect('figure_enter_event', mouse_in)
@@ -1020,13 +1027,15 @@ class App:
         qualities = excel['quality']
         ids = excel['id']
         problem_types = excel['problem_type']
+        quadrants = excel['quadrant']
         registered_points = []
         for i in range(len(part_names)):
             part_name = part_names[i]
             quality = qualities[i]
             id = ids[i]
             problem_type = problem_types[i]
-            point = RegisteredPoint(part_name, quality, id, problem_type)
+            quadrant = quadrants[i]
+            point = RegisteredPoint(part_name, quality, id, problem_type, quadrant)
             registered_points.append(point)
         return registered_points
 
@@ -1038,8 +1047,9 @@ class App:
             quality = registered_point.quality
             id = registered_point.id
             problem_type = registered_point.problem_type
+            quadrant = registered_point.quadrant
             self.table.insert(parent='', index=self.registered_point_table_id,
-                              iid=self.registered_point_table_id, values=(part_name, quality, id, problem_type))
+                              iid=self.registered_point_table_id, values=(part_name, quality, id, problem_type, quadrant))
             self.registered_point_table_id += 1
 
     def update_registry(self, point):
@@ -1048,7 +1058,7 @@ class App:
         file_root = os.path.join(f, str(self.selected_record.name) + '.xlsx')
         excel = load_workbook(filename=file_root)
         sheet = excel['Sheet1']
-        new_row = [point.part_name, point.quality, point.id, point.problem_type]
+        new_row = [point.part_name, point.quality, point.id, point.problem_type, point.quadrant]
         sheet.append(new_row)
         excel.save(file_root)
 
@@ -1072,15 +1082,7 @@ class App:
                 dict_point_parts[idd] = [name]
             else:
                 dict_point_parts[idd].append(name)
-        print('lol')
         return dict_point_parts
-        # part_names = []
-        # for i in range(len(ids)):
-        #     name = names[i]
-        #     idd = ids[i]
-        #     if idd == id and name not in part_names:
-        #         part_names.append(name)
-        # return part_names
 
     def get_all_parts(self):
         if self.plane_type == 'v900':
@@ -1109,19 +1111,21 @@ class App:
             X = []
             Y = []
             Z = []
+            quadrant = ''
             for i in range(len(names)):
                 name = names[i]
                 x = xs[i]
                 y = ys[i]
                 z = zs[i]
                 id = ids[i]
-                quadrant = quadrants[i]
                 if id not in added_ids and name == part_name:
                     X.append(x)
                     Y.append(y)
                     Z.append(z)
                     added_ids.append(id)
-            p = Part(part_name, X, Y, Z)
+                    quadrant = quadrants[i]
+            p = Part(part_name, X, Y, Z, quadrant)
+            print(p.name, p.quadrant)
             all_parts.append(p)
         return part_names, all_parts
 
