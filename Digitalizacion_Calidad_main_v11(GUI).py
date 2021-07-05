@@ -29,7 +29,7 @@ class App:
         self.selected_part = '-'  # VARIABLE A ESCOGER (nombre de la parte)
         self.matchers = ['-FC-', '-FCFC-', '-FCFCFC-', '-FCFCFCFC-', '-FCTI-', '-FCTIAL-', '-FCTIFC-', '-FCTIFCAL-',
                          '-FCTIALAL-']  # Variable a escoger
-        self.selected_tool_types_1 = [503, 534, 535]  # VARIABLEA ESCOGER
+        self.selected_tool_types_1 = [503, 534, 535, 1534, 1535]  # VARIABLEA ESCOGER
         self.selected_tool_types = ['ADH', 'TDRILL']  # VARIABLE A ESCOGER
         self.registered_point_table_id = '-'  # Contador de id necesario para crear la tabla de la GUI
 
